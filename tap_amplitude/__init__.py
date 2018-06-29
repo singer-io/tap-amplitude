@@ -174,9 +174,6 @@ def discover_catalog(connection):
 
 
 def do_discover(connection):
-    # catalog = discover_catalog(connection)
-    # import pdb
-    # pdb.set_trace()
     discover_catalog(connection).dump()
 
 
@@ -205,7 +202,6 @@ def do_sync_incremental(con, catalog_entry, state, columns):
 
 
 def stream_is_selected(mdata):
-    # return True
     return mdata.get((), {}).get('selected', False)
 
 
