@@ -3,13 +3,13 @@
 import backoff
 import snowflake.connector
 
-CONNECT_TIMEOUT_SECONDS = 300
-READ_TIMEOUT_SECONDS = 3600
 
 @backoff.on_exception(backoff.expo,
                       (snowflake.connector.Error),
                       max_tries=5,
                       factor=2)
+
+
 def connect_with_backoff(config):
   return snowflake.connector.connect(user=config['username'],
     password=config['password'],

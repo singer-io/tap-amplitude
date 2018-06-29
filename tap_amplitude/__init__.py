@@ -99,34 +99,36 @@ def create_column_metadata(cols):
                                ('properties', c.column_name),
                                'selected-by-default',
                                schema.inclusion != 'unsupported')
-        mdata = metadata.write(mdata,
-                               ('properties', c.column_name),
-                               'snowflake-datatype',
-                               c.data_type.lower())
+        # TODO: 
+        #   {"invalid_fields":"Non-discoverable metadata can not be discovered:
+        # mdata = metadata.write(mdata,
+        #                        ('properties', c.column_name),
+        #                        'datatype',
+        #                        c.data_type.lower())
 
     return metadata.to_list(mdata)
 
 
 def discover_catalog(connection):
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT table_schema,
-                   table_name,
-                   column_name,
-                   data_type,
-                   character_maximum_length,
-                   numeric_precision,
-                   numeric_scale
-                FROM information_schema.columns
-                WHERE table_schema != 'INFORMATION_SCHEMA'
-                ORDER BY table_schema, table_name
-            """)
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT table_schema,
+               table_name,
+               column_name,
+               data_type,
+               character_maximum_length,
+               numeric_precision,
+               numeric_scale
+            FROM information_schema.columns
+            WHERE table_schema != 'INFORMATION_SCHEMA'
+            ORDER BY table_schema, table_name
+        """)
 
-        columns = []
+    columns = []
+    rec = cursor.fetchone()
+    while rec is not None:
+        columns.append(Column(*rec))
         rec = cursor.fetchone()
-        while rec is not None:
-            columns.append(Column(*rec))
-            rec = cursor.fetchone()
 
     entries = []
     for (k, cols) in itertools.groupby(columns, lambda c: (c.table_schema, c.table_name)):
@@ -146,8 +148,8 @@ def discover_catalog(connection):
             key_properties = ['UUID']
             replication_key = "EVENT_TIME"
         elif "merge" in table_name.lower():
-            replication_key = "MERGE_EVENT_TIME"
             key_properties = []
+            replication_key = "MERGE_EVENT_TIME"
         else:
             replication_key = ""
             key_properties = []
@@ -162,8 +164,8 @@ def discover_catalog(connection):
             stream=table_name,
             metadata=metadata.to_list(md_map),
             tap_stream_id=table_schema + "-" + table_name,
-            replication_key=replication_key,
-            replication_method="INCREMENTAL",
+            replication_key=replication_key, # This is a non-discoverable key.
+            replication_method="INCREMENTAL", # This is a non-discoverable key.
             schema=schema)
 
         entries.append(entry)
@@ -172,6 +174,9 @@ def discover_catalog(connection):
 
 
 def do_discover(connection):
+    # catalog = discover_catalog(connection)
+    # import pdb
+    # pdb.set_trace()
     discover_catalog(connection).dump()
 
 
@@ -200,8 +205,8 @@ def do_sync_incremental(con, catalog_entry, state, columns):
 
 
 def stream_is_selected(mdata):
-    return True
-    # return mdata.get((), {}).get('selected', False)
+    # return True
+    return mdata.get((), {}).get('selected', False)
 
 
 def do_sync(con, catalog, state):
