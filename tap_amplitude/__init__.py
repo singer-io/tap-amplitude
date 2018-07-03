@@ -86,7 +86,7 @@ def schema_for_column(c):
         result = Schema(None,
                         inclusion='unsupported',
                         description='Unsupported column type {}'.format(data_type))
-    
+
     return result
 
 
@@ -99,7 +99,7 @@ def create_column_metadata(cols):
                                ('properties', c.column_name),
                                'selected-by-default',
                                schema.inclusion != 'unsupported')
-        # TODO: 
+        # TODO:
         #   {"invalid_fields":"Non-discoverable metadata can not be discovered:
         # mdata = metadata.write(mdata,
         #                        ('properties', c.column_name),
@@ -139,11 +139,6 @@ def discover_catalog(connection):
         md = create_column_metadata(cols)
         md_map = metadata.to_map(md)
 
-        md_map = metadata.write(md_map,
-                                (),
-                                'schema-name',
-                                table_schema)
-
         if "events" in table_name.lower():
             key_properties = ['UUID']
             replication_key = "EVENT_TIME"
@@ -160,7 +155,6 @@ def discover_catalog(connection):
                                 key_properties)
 
         entry = CatalogEntry(
-            table=table_name,
             stream=table_name,
             metadata=metadata.to_list(md_map),
             tap_stream_id=table_schema + "-" + table_name,
