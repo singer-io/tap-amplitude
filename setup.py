@@ -13,6 +13,7 @@ setup(name='tap-amplitude',
           'snowflake-connector-python==1.6.3',
           'attrs==16.3.0',
           'pendulum==1.2.0',
+          'pytz==2018.4',
           'singer-python==5.1.5',
           'backoff==1.3.2',
           'nose==1.3.7'
