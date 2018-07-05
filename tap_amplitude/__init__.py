@@ -92,13 +92,13 @@ def schema_for_column(c):
 
 def create_column_metadata(cols):
     mdata = {}
-    mdata = metadata.write(mdata, (), 'selected-by-default', True)
     for c in cols:
         schema = schema_for_column(c)
         mdata = metadata.write(mdata,
                                ('properties', c.column_name),
-                               'selected-by-default',
-                               schema.inclusion != 'unsupported')
+                               'inclusion',
+                               schema.inclusion)
+
         # TODO:
         #   {"invalid_fields":"Non-discoverable metadata can not be discovered:
         # mdata = metadata.write(mdata,
