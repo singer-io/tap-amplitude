@@ -18,15 +18,15 @@ LOGGER = singer.get_logger()
 
 
 def generate_select_sql(catalog_entry, columns):
-    table = catalog_entry.table
+    table = catalog_entry.stream
     catalog_metadata = metadata.to_map(catalog_entry.metadata)
     stream_metadata = catalog_metadata.get((), {})
     schema = stream_metadata.get('schema-name')
 
     select_sql = """
-                SELECT {} 
-                    FROM {}.{}
-                """.format(','.join(columns), schema, table)
+                SELECT {}
+                    FROM {}
+                """.format(','.join(columns), catalog_entry.tap_stream_id.replace('-','.'))
 
     return select_sql
 
@@ -68,7 +68,7 @@ def sync_table(connection, catalog_entry, state, columns):
             replication_key_value = pendulum.parse(replication_key_value)
 
         select_sql += ' WHERE {} >= %(replication_key_value)s ORDER BY {} ASC'.format(
-                              catalog_entry.replication_key, 
+                              catalog_entry.replication_key,
                               catalog_entry.replication_key)
 
     elif catalog_entry.replication_key is not None:
@@ -112,9 +112,3 @@ def sync_table(connection, catalog_entry, state, columns):
         singer.write_state(state)
 
     return counter.value
-
-
-
-
-
-
