@@ -141,7 +141,7 @@ def discover_catalog(connection):
 
         if "events" in table_name.lower():
             key_properties = ['UUID']
-            replication_key = "EVENT_TIME"
+            replication_key = "SERVER_UPLOAD_TIME"
         elif "merge" in table_name.lower():
             key_properties = []
             replication_key = "MERGE_EVENT_TIME"
