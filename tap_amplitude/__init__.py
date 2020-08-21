@@ -58,11 +58,9 @@ Column = collections.namedtuple('Column', [
     "numeric_scale"])
 
 
-def schema_for_column(c):
+def schema_for_column(c, inclusion='available'):
     '''Returns the Schema object for the given Column.'''
     data_type = c.data_type.lower()
-
-    inclusion = 'available'
 
     result = Schema(inclusion=inclusion)
 
@@ -134,25 +132,44 @@ def discover_catalog(connection):
     for (k, cols) in itertools.groupby(columns, lambda c: (c.table_schema, c.table_name)):
         cols = list(cols)
         (table_schema, table_name) = k
-        schema = Schema(type='object',
-                        properties={c.column_name: schema_for_column(c) for c in cols})
         md = create_column_metadata(cols)
         md_map = metadata.to_map(md)
 
         if "events" in table_name.lower():
             key_properties = ['UUID']
+            valid_replication_keys = ["SERVER_UPLOAD_TIME"]
             replication_key = "SERVER_UPLOAD_TIME"
         elif "merge" in table_name.lower():
             key_properties = []
+            valid_replication_keys = ["MERGE_EVENT_TIME"]
             replication_key = "MERGE_EVENT_TIME"
         else:
             replication_key = ""
             key_properties = []
+            valid_replication_keys = []
+
+        properties = {}
+        for c in cols:
+            if c.column_name == replication_key or c.column_name in key_properties:
+                properties[c.column_name] = schema_for_column(c, "automatic")
+            else:
+                properties[c.column_name] = schema_for_column(c, "available")
+        schema = Schema(type='object', properties=properties)
 
         md_map = metadata.write(md_map,
                                 (),
                                 'table-key-properties',
                                 key_properties)
+
+        md_map = metadata.write(md_map,
+                                (),
+                                'valid-replication-keys',
+                                valid_replication_keys)
+
+        md_map = metadata.write(md_map,
+                                ('properties', replication_key),
+                                'inclusion',
+                                'automatic')
 
         entry = CatalogEntry(
             stream=table_name,
