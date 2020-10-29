@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='tap-amplitude',
-      version='1.0.1',
+      version='1.1.0',
       description='Singer.io tap for extracting data from Amplitude via Snowflake',
       author='Stitch',
       url='https://singer.io',
