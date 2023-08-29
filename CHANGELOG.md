@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1
+  * Bump snowflake-connector-python from 1.6.3 to 3.0.2 [#6](https://github.com/singer-io/tap-amplitude/pull/6)
+
 ## 1.1.0
   * Add support to select replication keys automatically, change replication keys for events streams from event_time to server_upload_time [#3](https://github.com/singer-io/tap-amplitude/pull/3)
 
