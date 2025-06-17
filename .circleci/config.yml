@@ -14,7 +14,7 @@ jobs:
             python3 -m venv /usr/local/share/virtualenvs/tap-amplitude
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install -U "pip==22.2.2" "setuptools==65.3.0"
-            pip install .[dev]
+            pip install -e .[dev]  # CRITICAL: install tap_amplitude as a package
 
       - run:
           name: "Run Pylint"
@@ -28,13 +28,12 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install nose coverage
-            pip install opentelemetry-api opentelemetry-sdk  # Optional dependency for Snowflake connector
+            pip install opentelemetry-api opentelemetry-sdk
 
-            #  Clean stale .pyc files that caused test failure
+            # Clean .pyc files
             find . -type d -name "__pycache__" -exec rm -r {} +
             find . -name "*.pyc" -delete
 
-            # Test environment variables
             export TAP_SNOWFLAKE_USERNAME="TESTDEV"
             export TAP_SNOWFLAKE_PASSWORD="Test@123456789"
             export TAP_SNOWFLAKE_ACCOUNT="UABYGEJ-WN20681"
