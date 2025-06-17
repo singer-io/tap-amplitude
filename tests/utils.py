@@ -38,7 +38,8 @@ def build_col_sql(col):
     return f"{col['name']} {col['type']}"
 
 
-def ensure_test_table(con, table_spec):
+# Renamed function to avoid nose auto-discovery
+def _ensure_test_table(con, table_spec):
     col_sql = ", ".join(build_col_sql(c) for c in table_spec['columns'])
     with con.cursor() as cursor:
         sql = f"""
@@ -49,5 +50,4 @@ def ensure_test_table(con, table_spec):
 
 
 def set_replication_method_and_key(con, method_and_key):
-    # Stub for future use
     return

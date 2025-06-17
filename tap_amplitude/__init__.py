@@ -18,7 +18,6 @@ from singer.catalog import Catalog, CatalogEntry
 
 from tap_amplitude.connection import connect_with_backoff
 import tap_amplitude.sync_strategies.incremental as sync_incremental
-
 Column = collections.namedtuple('Column', [
     "table_schema", "table_name", "column_name", "data_type",
     "character_maximum_length", "numeric_precision", "numeric_scale"

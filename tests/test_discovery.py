@@ -1,7 +1,8 @@
 import unittest
 from singer import get_logger, metadata
-from utils import get_test_connection, ensure_test_table
-from tap_amplitude import discover_catalog  # Correct import
+from utils import get_test_connection, _ensure_test_table  # correct import
+
+from tap_amplitude import discover_catalog
 
 LOGGER = get_logger()
 
@@ -23,7 +24,7 @@ class TestEventsTable(unittest.TestCase):
             "name": cls.table_name,
         }
         con = get_test_connection()
-        ensure_test_table(con, table_spec)
+        _ensure_test_table(con, table_spec)  # Updated
 
     def test_catalog_has_correct_stream(self):
         con = get_test_connection()
@@ -46,6 +47,7 @@ class TestEventsTable(unittest.TestCase):
         mdata = metadata.to_map(stream_dict["metadata"])
         key_properties = mdata.get((), {}).get("table-key-properties", [])
         self.assertEqual(self.key_property, key_properties[0])
+
 
 if __name__ == "__main__":
     unittest.main()

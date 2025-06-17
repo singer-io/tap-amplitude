@@ -1,8 +1,8 @@
 import unittest
-import os
 from singer import get_logger, metadata
-from utils import get_test_connection, ensure_test_table
-from tap_amplitude import discover_catalog  # Correct import
+from utils import get_test_connection, _ensure_test_table  # Correct import
+
+from tap_amplitude import discover_catalog
 
 LOGGER = get_logger()
 
@@ -29,7 +29,7 @@ class TestIncrementalSync(unittest.TestCase):
             "name": cls.table_name
         }
         con = get_test_connection()
-        ensure_test_table(con, table_spec)
+        _ensure_test_table(con, table_spec)  # Updated
 
     def test_discover_includes_replication_key(self):
         con = get_test_connection()
@@ -51,6 +51,7 @@ class TestIncrementalSync(unittest.TestCase):
         stream_id = f"{self.schema_name}-{self.table_name}"
         stream = next(s for s in catalog["streams"] if s["tap_stream_id"] == stream_id)
         self.assertIn(self.replication_key, stream["schema"]["properties"])
+
 
 if __name__ == "__main__":
     unittest.main()
