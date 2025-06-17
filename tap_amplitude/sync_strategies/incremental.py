@@ -79,7 +79,7 @@ def sync_table(connection, catalog_entry, state, columns):
                 if isinstance(v, (datetime.datetime, datetime.date)):
                     rec[k] = v.isoformat()
 
-            singer.write_record(catalog_entry.stream, rec)  # ✅ This emits the record to output
+            singer.write_record(catalog_entry.stream, rec)
 
             if catalog_entry.replication_method == "INCREMENTAL":
                 singer.write_bookmark(state,

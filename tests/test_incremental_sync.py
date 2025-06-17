@@ -1,6 +1,6 @@
 import unittest
 from singer import get_logger, metadata
-from utils import get_test_connection, _ensure_test_table  # Correct import
+from utils import get_test_connection, _ensure_test_table
 
 from tap_amplitude import discover_catalog
 
@@ -29,7 +29,7 @@ class TestIncrementalSync(unittest.TestCase):
             "name": cls.table_name
         }
         con = get_test_connection()
-        _ensure_test_table(con, table_spec)  # Updated
+        _ensure_test_table(con, table_spec)
 
     def test_discover_includes_replication_key(self):
         con = get_test_connection()

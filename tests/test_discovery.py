@@ -1,6 +1,6 @@
 import unittest
 from singer import get_logger, metadata
-from utils import get_test_connection, _ensure_test_table  # correct import
+from utils import get_test_connection, _ensure_test_table
 
 from tap_amplitude import discover_catalog
 
@@ -24,7 +24,7 @@ class TestEventsTable(unittest.TestCase):
             "name": cls.table_name,
         }
         con = get_test_connection()
-        _ensure_test_table(con, table_spec)  # Updated
+        _ensure_test_table(con, table_spec)
 
     def test_catalog_has_correct_stream(self):
         con = get_test_connection()
