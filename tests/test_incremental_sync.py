@@ -1,7 +1,8 @@
 import unittest
+import os
 from singer import get_logger, metadata
 from utils import get_test_connection, ensure_test_table
-from tap_amplitude.discover import discover_catalog  #  direct import
+from tap_amplitude import discover_catalog  # Correct import
 
 LOGGER = get_logger()
 
@@ -32,7 +33,7 @@ class TestIncrementalSync(unittest.TestCase):
 
     def test_discover_includes_replication_key(self):
         con = get_test_connection()
-        catalog = discover_catalog(con).to_dict()  #  updated call
+        catalog = discover_catalog(con).to_dict()
 
         stream_id = f"{self.schema_name}-{self.table_name}"
         test_streams = [s for s in catalog["streams"] if s["tap_stream_id"] == stream_id]
@@ -45,7 +46,7 @@ class TestIncrementalSync(unittest.TestCase):
 
     def test_replication_key_in_schema(self):
         con = get_test_connection()
-        catalog = discover_catalog(con).to_dict()  #  updated call
+        catalog = discover_catalog(con).to_dict()
 
         stream_id = f"{self.schema_name}-{self.table_name}"
         stream = next(s for s in catalog["streams"] if s["tap_stream_id"] == stream_id)

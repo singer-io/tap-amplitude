@@ -1,7 +1,7 @@
 import unittest
 from singer import get_logger, metadata
 from utils import get_test_connection, ensure_test_table
-from tap_amplitude.discover import discover_catalog  #  direct import
+from tap_amplitude import discover_catalog  # Correct import
 
 LOGGER = get_logger()
 
@@ -27,17 +27,18 @@ class TestEventsTable(unittest.TestCase):
 
     def test_catalog_has_correct_stream(self):
         con = get_test_connection()
-        catalog = discover_catalog(con).to_dict()  # updated call
+        catalog = discover_catalog(con).to_dict()
 
         test_streams = [
             s for s in catalog["streams"]
             if s["tap_stream_id"] == f"{self.schema_name}-{self.table_name}"
         ]
+
         self.assertEqual(len(test_streams), 1)
 
     def test_primary_key_is_uuid(self):
         con = get_test_connection()
-        catalog = discover_catalog(con).to_dict()  # updated call
+        catalog = discover_catalog(con).to_dict()
         stream_dict = next(
             s for s in catalog["streams"]
             if s["tap_stream_id"] == f"{self.schema_name}-{self.table_name}"
