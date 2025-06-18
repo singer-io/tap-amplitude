@@ -17,8 +17,7 @@ setup(name='tap-amplitude',
           'pendulum==3.1.0',
           'pytz==2025.2',
           'singer-python==6.1.1',
-          'backoff==2.2.1',
-          'nose==1.3.7'
+          'backoff==2.2.1'
       ],
       entry_points='''
           [console_scripts]
