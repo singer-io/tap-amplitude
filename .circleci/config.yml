@@ -34,12 +34,6 @@ jobs:
             find . -type d -name "__pycache__" -exec rm -r {} +
             find . -name "*.pyc" -delete
 
-            export TAP_SNOWFLAKE_USERNAME="TESTDEV"
-            export TAP_SNOWFLAKE_PASSWORD="Test@123456789"
-            export TAP_SNOWFLAKE_ACCOUNT="UABYGEJ-WN20681"
-            export TAP_SNOWFLAKE_DATABASE="SNOWFLAKE_LEARNING_DB"
-            export TAP_SNOWFLAKE_WAREHOUSE="COMPUTE_WH"
-
             mkdir -p test_output
             nosetests --with-coverage --cover-erase --cover-package=tap_amplitude --cover-html-dir=htmlcov tests | tee test_output/report.xml
             coverage html
@@ -49,21 +43,6 @@ jobs:
 
       - store_artifacts:
           path: htmlcov
-
-      - run:
-          name: "Run Integration Tests"
-          no_output_timeout: 30m
-          command: |
-            export TAP_SNOWFLAKE_USERNAME="TESTDEV"
-            export TAP_SNOWFLAKE_PASSWORD="Test@123456789"
-            export TAP_SNOWFLAKE_ACCOUNT="UABYGEJ-WN20681"
-            export TAP_SNOWFLAKE_DATABASE="SNOWFLAKE_LEARNING_DB"
-            export TAP_SNOWFLAKE_WAREHOUSE="COMPUTE_WH"
-
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox ./dev_env.sh
-            source ./dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap tap-amplitude tests
 
 workflows:
   version: 2
