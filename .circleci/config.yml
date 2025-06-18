@@ -30,10 +30,6 @@ jobs:
             pip install nose coverage
             pip install opentelemetry-api opentelemetry-sdk
 
-            # Clean .pyc files
-            find . -type d -name "__pycache__" -exec rm -r {} +
-            find . -name "*.pyc" -delete
-
             mkdir -p test_output
             nosetests --with-coverage --cover-erase --cover-package=tap_amplitude --cover-html-dir=htmlcov tests | tee test_output/report.xml
             coverage html
