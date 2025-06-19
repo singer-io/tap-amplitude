@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-# pylint: disable=missing-docstring,not-an-iterable,too-many-locals,too-many-arguments,too-many-branches,invalid-name,duplicate-code,too-many-statements
 
+from pprint import pprint
 import snowflake.connector
 import datetime
 import collections
 import itertools
+from itertools import dropwhile
 import copy
 import pendulum
+
 import singer
 import singer.metrics as metrics
 import singer.schema
@@ -19,16 +21,22 @@ from singer.catalog import Catalog, CatalogEntry
 from tap_amplitude.connection import connect_with_backoff
 import tap_amplitude.sync_strategies.incremental as sync_incremental
 
+# Updated: Removed unused fields from Column to match SELECT clause
 Column = collections.namedtuple('Column', [
-    "table_schema", "table_name", "column_name", "data_type",
-    "character_maximum_length", "numeric_precision", "numeric_scale"
+    "table_schema",
+    "table_name",
+    "column_name",
+    "data_type",
+    "character_maximum_length",
+    "numeric_precision",
+    "numeric_scale"
 ])
 
 REQUIRED_CONFIG_KEYS = ['account', 'warehouse', 'database', 'username', 'password']
 LOGGER = singer.get_logger()
 
+
 def schema_for_column(c, inclusion='available'):
-    """Maps Snowflake data types to Singer schema definitions."""
     STRING_SCHEMA = {'type': ['null', 'string']}
     NUMBER_SCHEMA = {'type': ['null', 'number']}
     DATETIME_SCHEMA = {'type': ['null', 'string'], 'format': 'date-time'}
@@ -59,6 +67,7 @@ def schema_for_column(c, inclusion='available'):
 
     return Schema(None, inclusion='unsupported', description=f'Unsupported column type {data_type}')
 
+
 def create_column_metadata(cols):
     mdata = {}
     for c in cols:
@@ -66,16 +75,23 @@ def create_column_metadata(cols):
         mdata = metadata.write(mdata, ('properties', c.column_name), 'inclusion', schema.inclusion)
     return metadata.to_list(mdata)
 
+
 def discover_catalog(connection):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT table_schema, table_name, column_name, data_type,
-               character_maximum_length, numeric_precision, numeric_scale
+        SELECT table_schema,
+               table_name,
+               column_name,
+               data_type,
+               character_maximum_length,
+               numeric_precision,
+               numeric_scale
         FROM information_schema.columns
         WHERE table_schema != 'INFORMATION_SCHEMA'
         ORDER BY table_schema, table_name
     """)
 
+    # Replaces: while-loop based column appending in old version
     columns = [Column(*rec) for rec in cursor]
     entries = []
 
@@ -83,17 +99,18 @@ def discover_catalog(connection):
         cols = list(cols_iter)
         available_cols = {c.column_name.upper(): c for c in cols}
 
+        # NEW: Dynamically detect replication key instead of hardcoding table name logic
         preferred_keys = ["SERVER_UPLOAD_TIME", "TIME_CREATED", "EVENT_TIME", "MERGE_EVENT_TIME"]
         rk = next((k for k in preferred_keys if k in available_cols), "")
         if not rk:
             for col in available_cols:
                 if col.endswith(("_TIME", "_TS", "_DATE")):
                     rk = col
-                    break
+                    break  # NEW: Fallback logic for timestamp-based key detection
 
-        replication_key = rk
+        replication_key = rk  # Similar role as old 'replication_key = ...'
         replication_method = "INCREMENTAL" if replication_key else "FULL_TABLE"
-        key_properties = ["UUID"] if "UUID" in available_cols else []
+        key_properties = ["UUID"] if "UUID" in available_cols else []  # Replaces old key_properties logic
 
         properties = {}
         for c in cols:
@@ -101,12 +118,15 @@ def discover_catalog(connection):
             properties[c.column_name] = schema_for_column(c, incl)
 
         schema_obj = Schema(type="object", properties=properties)
+
+        # Metadata creation and enhancement
         md_map = metadata.to_map(create_column_metadata(cols))
         md_map = metadata.write(md_map, (), "table-key-properties", key_properties)
         md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key] if replication_key else [])
         if replication_key:
             md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
 
+        # Final catalog entry
         entry = CatalogEntry(
             stream=table,
             tap_stream_id=f"{schema}-{table}",
@@ -115,6 +135,8 @@ def discover_catalog(connection):
             replication_key=replication_key,
             replication_method=replication_method
         )
+
+        # NEW: Select stream and fields by default (replaces CLI args or manual selection)
         entry.selected = True
         for md in entry.metadata:
             if md["metadata"].get("inclusion") != "unsupported":
@@ -124,12 +146,16 @@ def discover_catalog(connection):
 
     return Catalog(entries)
 
+
+
 def do_discover(connection):
     discover_catalog(connection).dump()
+
 
 def get_key_properties(catalog_entry):
     catalog_metadata = metadata.to_map(catalog_entry.metadata)
     return catalog_metadata.get((), {}).get('table-key-properties', [])
+
 
 def do_sync_incremental(con, catalog_entry, state, columns):
     LOGGER.info("Stream %s is using incremental replication", catalog_entry.stream)
@@ -155,8 +181,10 @@ def do_sync_incremental(con, catalog_entry, state, columns):
 
         return records
 
+
 def stream_is_selected(mdata):
     return mdata.get((), {}).get('selected', False)
+
 
 def do_sync(con, catalog, state):
     for catalog_entry in catalog.streams:
@@ -184,6 +212,7 @@ def do_sync(con, catalog, state):
     singer.write_state(state)
     LOGGER.info("Finished sync")
 
+
 def main_impl():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
     con = connect_with_backoff(args.config)
@@ -199,6 +228,7 @@ def main_impl():
         do_sync(con, catalog, state)
     else:
         LOGGER.info("No properties were selected")
+
 
 def main():
     try:
