@@ -33,10 +33,10 @@ Column = collections.namedtuple('Column', [
 ])
 
 REQUIRED_CONFIG_KEYS = [
-    'account', 
-    'warehouse', 
-    'database', 
-    'username', 
+    'account',
+    'warehouse',
+    'database',
+    'username',
     'password'
 ]
 
