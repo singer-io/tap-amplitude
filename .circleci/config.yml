@@ -14,17 +14,17 @@ jobs:
             python3 -m venv /usr/local/share/virtualenvs/tap-amplitude
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install -U "pip==22.2.2" "setuptools==65.3.0"
-            pip install -e .[dev]  # install tap_amplitude as a package
+            pip install -e .[dev]
 
       - run:
-          name: "Inject Dummy Env Vars for CI (Snowflake)"
+          name: "Set Dummy Snowflake Env Vars for CI"
           command: |
             echo 'export TAP_SNOWFLAKE_USERNAME=dummy_user' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_PASSWORD=dummy_pass' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_ACCOUNT=dummy_account' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_DATABASE=dummy_db' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_WAREHOUSE=dummy_wh' >> $BASH_ENV
-            echo 'Dummy Snowflake ENV Vars added'
+            source $BASH_ENV
 
       - run:
           name: "Run Pylint"
