@@ -37,7 +37,8 @@ REQUIRED_CONFIG_KEYS = [
     'warehouse', 
     'database', 
     'username', 
-    'password']
+    'password'
+]
 
 LOGGER = singer.get_logger()
 
