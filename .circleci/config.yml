@@ -24,11 +24,11 @@ jobs:
             echo 'export TAP_SNOWFLAKE_ACCOUNT=dummy_account' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_DATABASE=dummy_db' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_WAREHOUSE=dummy_wh' >> $BASH_ENV
-            source $BASH_ENV
 
       - run:
           name: "Run Pylint"
           command: |
+            source $BASH_ENV
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install pylint
             pylint tap_amplitude -d C,R,W || true
@@ -36,10 +36,10 @@ jobs:
       - run:
           name: "Run Unit Tests"
           command: |
+            source $BASH_ENV
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install nose coverage
             pip install opentelemetry-api opentelemetry-sdk
-
             mkdir -p test_output
             nosetests --with-coverage --cover-erase --cover-package=tap_amplitude --cover-html-dir=htmlcov tests | tee test_output/report.xml
             coverage html
