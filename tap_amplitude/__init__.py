@@ -32,7 +32,13 @@ Column = collections.namedtuple('Column', [
     "numeric_scale"
 ])
 
-REQUIRED_CONFIG_KEYS = ['account', 'warehouse', 'database', 'username', 'password']
+REQUIRED_CONFIG_KEYS = [
+    'account', 
+    'warehouse', 
+    'database', 
+    'username', 
+    'password']
+
 LOGGER = singer.get_logger()
 
 
