@@ -29,8 +29,7 @@ Column = collections.namedtuple('Column', [
     "data_type",
     "character_maximum_length",
     "numeric_precision",
-    "numeric_scale"
-])
+    "numeric_scale"])
 
 REQUIRED_CONFIG_KEYS = [
     'account',
