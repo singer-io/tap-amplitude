@@ -44,15 +44,15 @@ def sync_table(connection, catalog_entry, state, columns):
                               catalog_entry.replication_key,
                               None)
     else:
-        # start with the bookmark.
+        # Start with the bookmark.
         replication_key_value = singer.get_bookmark(state,
                                                     catalog_entry.tap_stream_id,
                                                     catalog_entry.replication_key)
 
-    #with connection.cursor() as cursor:
+    # with connection.cursor() as cursor:
     cursor = connection.cursor()
 
-    #Build the sql for this schema
+    # Build the sql for this schema
     select_sql = generate_select_sql(catalog_entry, columns)
 
     # If bookmark exists, modify the query.
@@ -67,7 +67,7 @@ def sync_table(connection, catalog_entry, state, columns):
     elif catalog_entry.replication_key is not None:
         select_sql += ' ORDER BY {} ASC'.format(catalog_entry.replication_key)
 
-    #time to sync.
+    # time to sync.
     LOGGER.info('Running %s', select_sql)
     cursor.execute(select_sql)
 
@@ -81,7 +81,7 @@ def sync_table(connection, catalog_entry, state, columns):
             counter.increment()
             rows_saved += 1
 
-            #format record
+            # format record
             rec = process_row(row, columns)
 
             # Improved: datetime.date and datetime.datetime as ISO strings
