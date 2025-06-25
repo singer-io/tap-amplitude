@@ -13,7 +13,9 @@ import singer
 import singer.metrics as metrics
 import singer.schema
 
-from singer import utils, metadata, bookmarks
+from singer import utils
+from singer import metadata 
+from singer import bookmarks
 from singer import Transformer
 from singer.schema import Schema
 from singer.catalog import Catalog, CatalogEntry
