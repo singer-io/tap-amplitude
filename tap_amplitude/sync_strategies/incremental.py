@@ -35,9 +35,8 @@ def process_row(row, columns):
 
 
 def sync_table(connection, catalog_entry, state, columns):
+    # If there is an existing bookmark, use it; otherwise, use replication_key
     replication_key_value = None
-
-    # Bookmark logic
     if not state.get('bookmarks', {}).get(catalog_entry.tap_stream_id):
         singer.write_bookmark(state,
                               catalog_entry.tap_stream_id,
@@ -52,7 +51,7 @@ def sync_table(connection, catalog_entry, state, columns):
     # with connection.cursor() as cursor:
     cursor = connection.cursor()
 
-    # Build the sql for this schema
+    # Build the sql for this stream.
     select_sql = generate_select_sql(catalog_entry, columns)
 
     # If bookmark exists, modify the query.
