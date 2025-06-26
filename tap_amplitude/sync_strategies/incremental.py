@@ -67,6 +67,7 @@ def sync_table(connection, catalog_entry, state, columns):
     elif catalog_entry.replication_key is not None:
         select_sql += ' ORDER BY {} ASC'.format(catalog_entry.replication_key)
     
+    # time to sync.
     LOGGER.info('Running %s', select_sql)
     cursor.execute(select_sql)
 
