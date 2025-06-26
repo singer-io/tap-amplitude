@@ -60,9 +60,10 @@ def sync_table(connection, catalog_entry, state, columns):
             replication_key_value = pendulum.parse(replication_key_value)
 
         select_sql += " WHERE {} >= '{}' ORDER BY {} ASC".format(
-            catalog_entry.replication_key,
-            replication_key_value,
-            catalog_entry.replication_key)
+                              catalog_entry.replication_key,
+                              replication_key_value,
+            -                 catalog_entry.replication_key)
+    
     elif catalog_entry.replication_key is not None:
         select_sql += ' ORDER BY {} ASC'.format(catalog_entry.replication_key)
     
@@ -101,12 +102,10 @@ def sync_table(connection, catalog_entry, state, columns):
             singer.write_record(catalog_entry.tap_stream_id, rec)
 
             if catalog_entry.replication_method == "INCREMENTAL":
-                singer.write_bookmark(
-                    state,
-                    catalog_entry.tap_stream_id,
-                    catalog_entry.replication_key,
-                    rec[catalog_entry.replication_key]
-                )
+                singer.write_bookmark(state,
+                                      catalog_entry.tap_stream_id,
+                                      catalog_entry.replication_key,
+                                      rec[catalog_entry.replication_key])
 
             if rows_saved % 100 == 0:
                 singer.write_state(state)
