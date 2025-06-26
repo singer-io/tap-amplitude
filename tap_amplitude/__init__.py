@@ -23,16 +23,6 @@ from singer.catalog import Catalog, CatalogEntry
 from tap_amplitude.connection import connect_with_backoff
 import tap_amplitude.sync_strategies.incremental as sync_incremental
 
-# Updated: Removed unused fields from Column to match SELECT clause
-Column = collections.namedtuple('Column', [
-    "table_schema",
-    "table_name",
-    "column_name",
-    "data_type",
-    "character_maximum_length",
-    "numeric_precision",
-    "numeric_scale"])
-
 REQUIRED_CONFIG_KEYS = [
     'account',
     'warehouse',
@@ -99,6 +89,16 @@ def discover_catalog(connection):
         ORDER BY table_schema, table_name
     """)
     
+    # Moved Column definition here
+    Column = collections.namedtuple('Column, [
+        "table_schema",
+        "table_name",
+        "column_name",
+        "data_type",
+        "character_maximum_length",
+        "numeric_precision",
+        "numeric_scale"
+    ])
     columns = [Column(*rec) for rec in cursor]
     entries = []
 
