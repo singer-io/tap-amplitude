@@ -65,8 +65,7 @@ def sync_table(connection, catalog_entry, state, columns):
             catalog_entry.replication_key)
     elif catalog_entry.replication_key is not None:
         select_sql += ' ORDER BY {} ASC'.format(catalog_entry.replication_key)
-
-    # time to sync.
+    
     LOGGER.info('Running %s', select_sql)
     cursor.execute(select_sql)
 
@@ -83,24 +82,31 @@ def sync_table(connection, catalog_entry, state, columns):
             # format record
             rec = process_row(row, columns)
 
-            # Improved: datetime.date and datetime.datetime as ISO strings
+            # Suggestion: use UTC aware formatting for datetime
+            utc = pytz.timezone('UTC')
             for k, v in rec.items():
                 if isinstance(v, (datetime.datetime, datetime.date)):
+                    rec[k] = utils.strftime(utc.localize(v))
+                elif isinstance(v, datetime.date):
                     rec[k] = v.isoformat()
 
             # resolve against metadata
             with Transformer() as transformer:
-                rec = transformer.transform(rec, catalog_entry.schema.to_dict(), metadata.to_map(catalog_entry.metadata))
+                rec = transformer.transform(
+                    rec,
+                    catalog_entry.schema.to_dict(),
+                    metadata.to_map(catalog_entry.metadata)
+                )
 
-            # write to singer.
             singer.write_record(catalog_entry.tap_stream_id, rec)
 
-            # Perhaps the more modern way of managing state.
             if catalog_entry.replication_method == "INCREMENTAL":
-                singer.write_bookmark(state,
-                                      catalog_entry.tap_stream_id,
-                                      catalog_entry.replication_key,
-                                      rec[catalog_entry.replication_key])
+                singer.write_bookmark(
+                    state,
+                    catalog_entry.tap_stream_id,
+                    catalog_entry.replication_key,
+                    rec[catalog_entry.replication_key]
+                )
 
             if rows_saved % 100 == 0:
                 singer.write_state(state)
