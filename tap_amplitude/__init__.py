@@ -14,7 +14,7 @@ import singer.metrics as metrics
 import singer.schema
 
 from singer import utils
-from singer import metadata 
+from singer import metadata
 from singer import bookmarks
 from singer import Transformer
 from singer.schema import Schema
@@ -98,8 +98,7 @@ def discover_catalog(connection):
         WHERE table_schema != 'INFORMATION_SCHEMA'
         ORDER BY table_schema, table_name
     """)
-
-    # Replaces: while-loop based column appending in old version
+    
     columns = [Column(*rec) for rec in cursor]
     entries = []
 
@@ -107,18 +106,18 @@ def discover_catalog(connection):
         cols = list(cols_iter)
         available_cols = {c.column_name.upper(): c for c in cols}
 
-        # NEW: Dynamically detect replication key instead of hardcoding table name logic
+        # This logic already attempts to detect valid timestamp/date fields dynamically.
         preferred_keys = ["SERVER_UPLOAD_TIME", "TIME_CREATED", "EVENT_TIME", "MERGE_EVENT_TIME"]
         rk = next((k for k in preferred_keys if k in available_cols), "")
         if not rk:
             for col in available_cols:
                 if col.endswith(("_TIME", "_TS", "_DATE")):
                     rk = col
-                    break  # NEW: Fallback logic for timestamp-based key detection
+                    break  # fallback handles cases where preferred keys are missing.
 
-        replication_key = rk  # Similar role as old 'replication_key = ...'
+        replication_key = rk
         replication_method = "INCREMENTAL" if replication_key else "FULL_TABLE"
-        key_properties = ["UUID"] if "UUID" in available_cols else []  # Replaces old key_properties logic
+        key_properties = ["UUID"] if "UUID" in available_cols else []
 
         properties = {}
         for c in cols:
@@ -134,7 +133,6 @@ def discover_catalog(connection):
         if replication_key:
             md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
 
-        # Final catalog entry
         entry = CatalogEntry(
             stream=table,
             tap_stream_id=f"{schema}-{table}",
@@ -144,7 +142,7 @@ def discover_catalog(connection):
             replication_method=replication_method
         )
 
-        # NEW: Select stream and fields by default (replaces CLI args or manual selection)
+        # Select stream and fields by default (intentional for ease of use, we can make it configurable if needed)
         entry.selected = True
         for md in entry.metadata:
             if md["metadata"].get("inclusion") != "unsupported":
