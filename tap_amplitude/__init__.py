@@ -24,11 +24,11 @@ from tap_amplitude.connection import connect_with_backoff
 import tap_amplitude.sync_strategies.incremental as sync_incremental
 
 REQUIRED_CONFIG_KEYS = [
-    "account",
-    "warehouse",
-    "database",
-    "username",
-    "password"
+    'account',
+    'warehouse',
+    'database',
+    'username',
+    'password'
 ]
 
 LOGGER = singer.get_logger()
