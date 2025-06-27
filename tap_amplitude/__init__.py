@@ -209,7 +209,8 @@ def do_sync_incremental(con, catalog_entry, state, columns):
 
     with metrics.job_timer('sync_table') as timer:
         timer.tags['table'] = catalog_entry.table
-        sync_incremental.sync_table(con, catalog_entry, state, columns)
+        #sync_incremental.sync_table(con, catalog_entry, state, columns)
+        return sync_incremental.sync_table(con, catalog_entry, state, columns)
 
 
 def stream_is_selected(mdata):
@@ -231,7 +232,10 @@ def do_sync(con, catalog, state):
 
         LOGGER.info("%s: Starting sync", stream_name)
         counter_value = do_sync_incremental(con, catalog_entry, state, columns)
-        LOGGER.info("%s: Completed sync (%s rows)", stream_name, counter_value)
+        if counter_value is not None:
+            LOGGER.info("%s: Completed sync (%s rows)" , stream_name, counter_value)
+        else:
+            LOGGER.info("%s: Completed sync (%s rows)", stream_name, counter_value)
 
     singer.write_state(state)
     LOGGER.info("Finished sync")

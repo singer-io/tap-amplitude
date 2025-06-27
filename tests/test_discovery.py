@@ -11,6 +11,7 @@ class TestEventsTable(unittest.TestCase):
     schema_name = "PUBLIC"
     key_property = "UUID"
 
+
     def setUp(self):
         table_spec = {
             "columns": [
@@ -34,6 +35,7 @@ class TestEventsTable(unittest.TestCase):
 
         test_streams = [s for s in catalog['streams'] if s['tap_stream_id'] == f"{self.schema_name}-{self.table_name}"]
 
+        # Is there one stream found with same name?
         self.assertEqual(len(test_streams), 1)
 
         stream_dict = test_streams[0]
@@ -45,10 +47,12 @@ class TestEventsTable(unittest.TestCase):
         key_properties = stream_metadata.get('table-key-properties', [])
         self.assertEqual(self.key_property, key_properties[0])
 
+        # Check metadata.
+
 
 class TestMergeTable(unittest.TestCase):
-    table_name = "TEST_MERGE_TABLE"
-    schema_name = "PUBLIC"
+    table_name = 'TEST_MERGE_TABLE'
+    schema_name = 'PUBLIC'
 
     def setUp(self):
         table_spec = {
