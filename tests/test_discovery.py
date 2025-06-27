@@ -2,7 +2,7 @@ from pprint import pprint
 import unittest
 import tap_amplitude
 from singer import get_logger, metadata
-from utils import get_test_connection, ensure_test_table
+from utils import get_test_connection, _ensure_test_table
 
 LOGGER = get_logger()
 
@@ -27,7 +27,7 @@ class TestEventsTable(unittest.TestCase):
             "name": self.table_name
         }
         con = get_test_connection()
-        ensure_test_table(con, table_spec)
+        _ensure_test_table(con, table_spec)
 
     def test_catalog(self):
         con = get_test_connection()
@@ -69,7 +69,7 @@ class TestMergeTable(unittest.TestCase):
             "name": self.table_name
         }
         con = get_test_connection()
-        ensure_test_table(con, table_spec)
+        _ensure_test_table(con, table_spec)
 
     def test_catalog(self):
         con = get_test_connection()
