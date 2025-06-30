@@ -7,29 +7,26 @@ from tap_amplitude.connection import connect_with_backoff
 
 LOGGER = get_logger()
 
-# Reads Snowflake config from environment variables. Throws an error if any are missing.
+
 def get_test_snowflake_config():
-    required_env_vars = [
-        'TAP_SNOWFLAKE_USERNAME',
-        'TAP_SNOWFLAKE_PASSWORD',
-        'TAP_SNOWFLAKE_ACCOUNT',
-        'TAP_SNOWFLAKE_DATABASE',
-        'TAP_SNOWFLAKE_WAREHOUSE'
-    ]
-    missing = [var for var in required_env_vars if not os.getenv(var)]
-    if missing:
-        raise Exception(f"Missing environment variables: {', '.join(missing)}")
+    missing_envs = [x for x in [os.getenv('TAP_SNOWFLAKE_USERNAME'),
+                                os.getenv('TAP_SNOWFLAKE_PASSWORD'),
+                                os.getenv('TAP_SNOWFLAKE_ACCOUNT'),
+                                os.getenv('TAP_SNOWFLAKE_DATABASE'),
+                                os.getenv('TAP_SNOWFLAKE_WAREHOUSE')] if x == None]
+    if len(missing_envs) != 0:
+        #pylint: disable=line-too-long
+        raise Exception("set TAP_SNOWFLAKE_USERNAME, TAP_SNOWFLAKE_PASSWORD, TAP_SNOWFLAKE_ACCOUNT, TAP_SNOWFLAKE_DATABASE, TAP_SNOWFLAKE_WAREHOUSE")
 
-    return {
-        'username': os.getenv('TAP_SNOWFLAKE_USERNAME'),
-        'password': os.getenv('TAP_SNOWFLAKE_PASSWORD'),
-        'account': os.getenv('TAP_SNOWFLAKE_ACCOUNT'),
-        'database': os.getenv('TAP_SNOWFLAKE_DATABASE'),
-        'warehouse': os.getenv('TAP_SNOWFLAKE_WAREHOUSE'),
-    }
+    config = {}
+    config['username'] = os.environ.get('TAP_SNOWFLAKE_USERNAME')
+    config['password'] = os.environ.get('TAP_SNOWFLAKE_PASSWORD')
+    config['account'] = os.environ.get('TAP_SNOWFLAKE_ACCOUNT')
+    config['database'] = os.environ.get('TAP_SNOWFLAKE_DATABASE')
+    config['warehouse'] = os.environ.get('TAP_SNOWFLAKE_WAREHOUSE')
+    return config
 
 
-# Modified function to return a mock connection if running in CircleCI
 def get_test_connection():
     if os.getenv("CIRCLECI"):
         LOGGER.info("Running in CircleCI - using mock Snowflake connection")
@@ -64,23 +61,21 @@ def get_test_connection():
         return connect_with_backoff(config)
 
 
-# Builds the SQL for each column based on its name and type
 def build_col_sql(col):
-    return f"{col['name']} {col['type']}"
+    return "{} {}".format(col['name'], col['type'])
 
 
-# Creates a test table for validation
-# This is renamed with an underscore to avoid nose picking it up as a test
-def _ensure_test_table(con, table_spec):
-    col_sql = ", ".join(build_col_sql(c) for c in table_spec['columns'])
+@nottest
+def ensure_test_table(con, table_spec):
+    col_sql = map(lambda c: build_col_sql(c), table_spec['columns'])
     with con.cursor() as cursor:
-        sql = f"""
-            CREATE OR REPLACE TRANSIENT TABLE {table_spec['schema']}.{table_spec['name']} ({col_sql})
-        """
-        LOGGER.info("Create table SQL: %s", sql)
+        sql = """
+            CREATE OR REPLACE TRANSIENT TABLE {}.{} ({})
+            """.format(table_spec['schema'], table_spec['name'], ",".join(col_sql))
+        LOGGER.info("Create table sql: %s", sql)
         cursor.execute(sql)
 
 
-# Stub for future expansion or test setup logic
 def set_replication_method_and_key(con, method_and_key):
+    # Create Catalog with `replication_method` and `replication_key`.
     return

@@ -13,6 +13,7 @@ from singer import utils
 
 from tap_amplitude.connection import connect_with_backoff
 
+
 LOGGER = singer.get_logger()
 
 
@@ -25,13 +26,20 @@ def generate_select_sql(catalog_entry, columns):
     select_sql = """
                 SELECT {}
                     FROM {}
-                """.format(','.join(columns), catalog_entry.tap_stream_id.replace('-', '.'))
+                """.format(','.join(columns), catalog_entry.tap_stream_id.replace('-','.'))
 
     return select_sql
 
 
 def process_row(row, columns):
-    return dict(zip(columns, list(row)))
+    utc = pytz.timezone('UTC')
+    row_as_list = list(row)
+
+    for i in range(len(row_as_list)):
+        if isinstance(row_as_list[i], datetime.datetime):
+            row_as_list[i] = utils.strftime(utc.localize(row_as_list[i]))
+
+    return dict(zip(columns, row_as_list))
 
 
 def sync_table(connection, catalog_entry, state, columns):
@@ -62,11 +70,11 @@ def sync_table(connection, catalog_entry, state, columns):
         select_sql += " WHERE {} >= '{}' ORDER BY {} ASC".format(
                               catalog_entry.replication_key,
                               replication_key_value,
-            -                 catalog_entry.replication_key)
-    
+                              catalog_entry.replication_key)
+
     elif catalog_entry.replication_key is not None:
         select_sql += ' ORDER BY {} ASC'.format(catalog_entry.replication_key)
-    
+
     # time to sync.
     LOGGER.info('Running %s', select_sql)
     cursor.execute(select_sql)
@@ -76,7 +84,6 @@ def sync_table(connection, catalog_entry, state, columns):
 
     with metrics.record_counter(catalog_entry.tap_stream_id) as counter:
         counter.tags['table'] = catalog_entry.table
-
         while row:
             counter.increment()
             rows_saved += 1
@@ -84,24 +91,14 @@ def sync_table(connection, catalog_entry, state, columns):
             # format record
             rec = process_row(row, columns)
 
-            # Suggestion: use UTC aware formatting for datetime
-            utc = pytz.timezone('UTC')
-            for k, v in rec.items():
-                if isinstance(v, (datetime.datetime, datetime.date)):
-                    rec[k] = utils.strftime(utc.localize(v))
-                elif isinstance(v, datetime.date):
-                    rec[k] = v.isoformat()
-
             # resolve against metadata
             with Transformer() as transformer:
-                rec = transformer.transform(
-                    rec,
-                    catalog_entry.schema.to_dict(),
-                    metadata.to_map(catalog_entry.metadata)
-                )
+                rec = transformer.transform(rec, catalog_entry.schema.to_dict(), metadata.to_map(catalog_entry.metadata))
 
+            # write to singer.
             singer.write_record(catalog_entry.tap_stream_id, rec)
 
+            # Perhaps the more modern way of managing state.
             if catalog_entry.replication_method == "INCREMENTAL":
                 singer.write_bookmark(state,
                                       catalog_entry.tap_stream_id,
