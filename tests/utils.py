@@ -1,6 +1,7 @@
 from pprint import pprint
 import os
 import singer
+from nose.tools import nottest
 
 from singer import get_logger
 from tap_amplitude.connection import connect_with_backoff
@@ -65,8 +66,8 @@ def build_col_sql(col):
     return "{} {}".format(col['name'], col['type'])
 
 
-@nottest
-def ensure_test_table(con, table_spec):
+@nottest 
+def _ensure_test_table(con, table_spec):
     col_sql = map(lambda c: build_col_sql(c), table_spec['columns'])
     with con.cursor() as cursor:
         sql = """
