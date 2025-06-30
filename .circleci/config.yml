@@ -34,23 +34,13 @@ jobs:
             pylint tap_amplitude -d C,R,W
 
       - run:
-          name: "Add Swap Memory (for nosetests OOM fix)"
-          command: |
-            fallocate -l 2G /tmp/swapfile || dd if=/dev/zero of=/tmp/swapfile bs=1M count=2048
-            chmod 600 /tmp/swapfile
-            mkswap /tmp/swapfile
-            swapon /tmp/swapfile
-
-      - run:
-          name: "Run Unit Tests"
+          name: "Run Unit Tests with Pytest"
           command: |
             source $BASH_ENV
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
-            pip install nose coverage
-            pip install opentelemetry-api opentelemetry-sdk
+            pip install pytest pytest-cov
             mkdir -p test_output
-            nosetests --with-coverage --cover-erase --cover-package=tap_amplitude --cover-html-dir=htmlcov tests | tee test_output/report.xml
-            coverage html
+            pytest tests --cov=tap_amplitude --cov-report=html:htmlcov | tee test_output/report.xml
 
       - store_test_results:
           path: test_output
