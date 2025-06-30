@@ -9,14 +9,6 @@ jobs:
       - checkout
 
       - run:
-          name: Add Swap Memory
-          command: |
-            sudo fallocate -l 2G /swapfile
-            sudo chmod 600 /swapfile
-            sudo mkswap /swapfile
-            sudo swapon /swapfile
-
-      - run:
           name: "Setup virtual env and install tap-amplitude"
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-amplitude
@@ -40,6 +32,14 @@ jobs:
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install pylint
             pylint tap_amplitude -d C,R,W
+
+      - run:
+          name: "Add Swap Memory (for nosetests OOM fix)"
+          command: |
+            fallocate -l 2G /tmp/swapfile || dd if=/dev/zero of=/tmp/swapfile bs=1M count=2048
+            chmod 600 /tmp/swapfile
+            mkswap /tmp/swapfile
+            swapon /tmp/swapfile
 
       - run:
           name: "Run Unit Tests"
