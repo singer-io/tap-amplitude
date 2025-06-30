@@ -7,7 +7,7 @@ import os
 import pdb
 
 from singer import get_logger, metadata
-from utils import get_test_connection, ensure_test_table
+from utils import get_test_connection, _ensure_test_table
 
 
 LOGGER = get_logger()

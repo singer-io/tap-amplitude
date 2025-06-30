@@ -9,12 +9,19 @@ jobs:
       - checkout
 
       - run:
+          name: "Set PYTHONPATH"
+          command: |
+            echo 'export PYTHONPATH=.' >> $BASH_ENV
+
+      - run:
           name: "Setup virtual env and install tap-amplitude"
           command: |
+            source $BASH_ENV
             python3 -m venv /usr/local/share/virtualenvs/tap-amplitude
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install -U "pip==22.2.2" "setuptools==65.3.0"
             pip install -e .[dev]
+
       - run:
           name: "Set Dummy Snowflake Env Vars for CI"
           command: |
@@ -23,6 +30,7 @@ jobs:
             echo 'export TAP_SNOWFLAKE_ACCOUNT=dummy_account' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_DATABASE=dummy_db' >> $BASH_ENV
             echo 'export TAP_SNOWFLAKE_WAREHOUSE=dummy_wh' >> $BASH_ENV
+
       - run:
           name: "Run Pylint"
           command: |
@@ -30,6 +38,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             pip install pylint
             pylint tap_amplitude -d C,R,W
+
       - run:
           name: "Run Unit Tests"
           command: |
@@ -40,6 +49,7 @@ jobs:
             mkdir -p test_output
             nosetests --with-coverage --cover-erase --cover-package=tap_amplitude --cover-html-dir=htmlcov tests | tee test_output/report.xml
             coverage html
+
       - store_test_results:
           path: test_output
 
