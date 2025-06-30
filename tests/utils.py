@@ -38,11 +38,26 @@ def get_test_connection():
                 class DummyCursor:
                     def __enter__(self): return self
                     def __exit__(self, exc_type, exc_val, exc_tb): pass
-                    def execute(self, sql): LOGGER.info("Mock execute: %s", sql)
+
+                    def execute(self, sql): 
+                        LOGGER.info("Mock execute: %s", sql)
+
+                    def __iter__(self):
+                        # Simulate output of a Snowflake `information_schema.columns` query
+                        return iter([
+                            ('PUBLIC', 'TEST_EVENTS_TABLE', 'UUID', 'STRING', None, None, None),
+                            ('PUBLIC', 'TEST_EVENTS_TABLE', 'string', 'STRING', None, None, None),
+                            ('PUBLIC', 'TEST_EVENTS_TABLE', 'integer', 'INTEGER', None, None, None),
+                            ('PUBLIC', 'TEST_EVENTS_TABLE', 'time_created', 'TIMESTAMP', None, None, None),
+                        ])
+
+                    def fetchone(self):
+                        # Simulate one row returned by fetchone()
+                        return ('PUBLIC', 'TEST_EVENTS_TABLE', 'UUID', 'STRING', None, None, None)
+
                 return DummyCursor()
 
         return DummyConnection()
-
     else:
         config = get_test_snowflake_config()
         return connect_with_backoff(config)
