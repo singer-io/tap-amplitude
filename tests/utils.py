@@ -68,6 +68,9 @@ def build_col_sql(col):
 
 @nottest 
 def _ensure_test_table(con, table_spec):
+    
+    # Creates a test table in Snowflake using the provided connection and table specification.
+    
     col_sql = map(lambda c: build_col_sql(c), table_spec['columns'])
     with con.cursor() as cursor:
         sql = """

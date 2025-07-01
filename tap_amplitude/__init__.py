@@ -209,7 +209,6 @@ def do_sync_incremental(con, catalog_entry, state, columns):
 
     with metrics.job_timer('sync_table') as timer:
         timer.tags['table'] = catalog_entry.table
-        #sync_incremental.sync_table(con, catalog_entry, state, columns)
         return sync_incremental.sync_table(con, catalog_entry, state, columns)
 
 

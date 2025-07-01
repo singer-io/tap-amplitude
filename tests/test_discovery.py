@@ -1,6 +1,6 @@
 import unittest
 from singer import get_logger, metadata
-from utils import get_test_connection, _ensure_test_table  # correct import
+from utils import get_test_connection, _ensure_test_table
 
 from tap_amplitude import discover_catalog
 
