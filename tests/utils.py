@@ -78,7 +78,6 @@ def build_col_sql(col):
     return "{} {}".format(col['name'], col['type'])
 
 
-@nottest 
 def _ensure_test_table(con, table_spec):
     """
     Creates a test table in Snowflake using the provided connection and table specification
