@@ -33,7 +33,7 @@ jobs:
             pip install pylint
             pylint tap_amplitude -d C,R,W
 
-      # TODO: <Jira Ticket ID : SAC-28011> Unit Tests are not running
+      # TODO: <SAC-28011> Unit Tests are not running
 
 workflows:
   version: 2
