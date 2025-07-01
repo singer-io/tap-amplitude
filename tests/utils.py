@@ -10,6 +10,10 @@ LOGGER = get_logger()
 
 
 def get_test_snowflake_config():
+    """
+    Returns Snowflake configuration read from environment variables
+
+    """
     missing_envs = [x for x in [os.getenv('TAP_SNOWFLAKE_USERNAME'),
                                 os.getenv('TAP_SNOWFLAKE_PASSWORD'),
                                 os.getenv('TAP_SNOWFLAKE_ACCOUNT'),
@@ -29,6 +33,10 @@ def get_test_snowflake_config():
 
 
 def get_test_connection():
+    """
+    Returns a snowflake connection.
+    
+    """
     if os.getenv("CIRCLECI"):
         LOGGER.info("Running in CircleCI - using mock Snowflake connection")
 
@@ -63,13 +71,22 @@ def get_test_connection():
 
 
 def build_col_sql(col):
+    """
+    Constructs a column definition string from a column dictionary
+
+    """
     return "{} {}".format(col['name'], col['type'])
 
 
 @nottest 
 def _ensure_test_table(con, table_spec):
-    
-    # Creates a test table in Snowflake using the provided connection and table specification.
+    """
+    Creates a test table in Snowflake using the provided connection and table specification
+    Args:
+       con: Snowflake connection object.
+       table_spec (dict): Dictoonary with 'schema', 'name', and 'columns' keys.
+
+    """
     
     col_sql = map(lambda c: build_col_sql(c), table_spec['columns'])
     with con.cursor() as cursor:
@@ -81,5 +98,7 @@ def _ensure_test_table(con, table_spec):
 
 
 def set_replication_method_and_key(con, method_and_key):
-    # Create Catalog with `replication_method` and `replication_key`.
+    """
+    Placeholder for setting replication method and key on the catalog.
+    """
     return
