@@ -11,7 +11,7 @@ setup(name='tap-amplitude',
       py_modules=['tap_amplitude'],
       install_requires=[
           'snowflake-connector-python==3.16.0',
-          'cryptography==42.0.2',
+          'cryptography==44.0.1',
           'attrs==16.3.0',
           'pendulum==1.2.0',
           'pytz==2018.4',
