@@ -90,9 +90,12 @@ def discover_catalog(connection):
         schema_obj = Schema(type="object", properties=properties)
         md_map = metadata.to_map(create_column_metadata(cols))
         md_map = metadata.write(md_map, (), "table-key-properties", key_properties)
-        md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key] if replication_key else [])
+
         if replication_key:
+            md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key])
             md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
+        else:
+            md_map = metadata.write(md_map, (), "valid-replication-keys", [])
 
         entry = CatalogEntry(
             stream=table,
@@ -103,8 +106,17 @@ def discover_catalog(connection):
             replication_method=replication_method
         )
         entry.selected = True
+
+        # Select only key & replication fields
         for md in entry.metadata:
-            if md["metadata"].get("inclusion") != "unsupported":
+            breadcrumb = md.get("breadcrumb", [])
+            inclusion = md["metadata"].get("inclusion")
+
+            if not breadcrumb:
+                continue
+
+            field_name = breadcrumb[-1]
+            if inclusion != "unsupported" and field_name in {replication_key, *key_properties}:
                 md["metadata"]["selected"] = True
 
         entries.append(entry)
