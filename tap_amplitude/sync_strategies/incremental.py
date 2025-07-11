@@ -16,18 +16,29 @@ from tap_amplitude.connection import connect_with_backoff
 LOGGER = singer.get_logger()
 
 
-def generate_select_sql(catalog_entry, columns):
-    table = catalog_entry.stream
-    catalog_metadata = metadata.to_map(catalog_entry.metadata)
-    stream_metadata = catalog_metadata.get((), {})
-    schema = stream_metadata.get('schema-name')
+def get_selected_columns(catalog_entry, columns):
+    metadata_map = metadata.to_map(catalog_entry.metadata)
+    selected_columns = []
+    for column in columns:
+        breadcrumb = ("properties", column)
+        column_meta = metadata_map.get(breadcrumb, {})
+        inclusion = column_meta.get("inclusion")
+        selected = column_meta.get("selected", False)
 
-    select_sql = """
-                SELECT {}
-                    FROM {}
-                """.format(','.join(columns), catalog_entry.tap_stream_id.replace('-', '.'))
+        if inclusion == "automatic" or selected is True:
+            selected_columns.append(column)
 
-    return select_sql
+    return selected_columns
+
+
+def generate_select_sql(tap_stream_id, selected_columns):
+    if not selected_columns:
+        raise ValueError(f"No selected fields found for stream {tap_stream_id}")
+
+    return f"""
+                SELECT {','.join(selected_columns)}
+                    FROM {tap_stream_id}
+           """
 
 
 def process_row(row, columns):
@@ -36,6 +47,8 @@ def process_row(row, columns):
 
 def sync_table(connection, catalog_entry, state, columns):
     replication_key_value = None
+
+    # Bookmark logic
     if not state.get('bookmarks', {}).get(catalog_entry.tap_stream_id):
         singer.write_bookmark(state,
                               catalog_entry.tap_stream_id,
@@ -46,9 +59,12 @@ def sync_table(connection, catalog_entry, state, columns):
                                                     catalog_entry.tap_stream_id,
                                                     catalog_entry.replication_key)
 
-    cursor = connection.cursor()
-    select_sql = generate_select_sql(catalog_entry, columns)
+    # Prepare selected fields for SQL
+    selected_columns = get_selected_columns(catalog_entry, columns)
+    tap_stream_id = catalog_entry.tap_stream_id.replace('-', '.')
+    select_sql = generate_select_sql(tap_stream_id, selected_columns)
 
+    # Apply replication key filtering
     if replication_key_value is not None:
         if catalog_entry.schema.properties[catalog_entry.replication_key].format == 'date-time':
             replication_key_value = pendulum.parse(replication_key_value)
@@ -61,25 +77,33 @@ def sync_table(connection, catalog_entry, state, columns):
         select_sql += ' ORDER BY {} ASC'.format(catalog_entry.replication_key)
 
     LOGGER.info('Running %s', select_sql)
+
+    cursor = connection.cursor()
     cursor.execute(select_sql)
 
     row = cursor.fetchone()
     rows_saved = 0
 
     with metrics.record_counter(catalog_entry.tap_stream_id) as counter:
-        counter.tags['table'] = catalog_entry.table
+        counter.tags['table'] = catalog_entry.stream
+
         while row:
             counter.increment()
             rows_saved += 1
 
-            rec = process_row(row, columns)
+            rec = process_row(row, selected_columns)
 
-            # Convert datetime.date and datetime.datetime to ISO strings
+            # Convert datetime/date to ISO strings
             for k, v in rec.items():
                 if isinstance(v, (datetime.datetime, datetime.date)):
                     rec[k] = v.isoformat()
 
-            singer.write_record(catalog_entry.stream, rec)  # This emits the record to output
+            # Apply transformations
+            with Transformer() as transformer:
+                rec = transformer.transform(rec, catalog_entry.schema.to_dict(), metadata.to_map(catalog_entry.metadata))
+
+            # Write to Singer
+            singer.write_record(catalog_entry.tap_stream_id, rec)
 
             if catalog_entry.replication_method == "INCREMENTAL":
                 singer.write_bookmark(state,
@@ -94,4 +118,4 @@ def sync_table(connection, catalog_entry, state, columns):
 
         singer.write_state(state)
 
-        return rows_saved
+    return counter.value
