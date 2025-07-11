@@ -96,6 +96,7 @@ def discover_catalog(connection):
         available_cols = {c.column_name.upper(): c for c in cols}
 
         key_properties = []
+        replication_key = None
         if "events" in table.lower():
             key_properties.append("UUID")
             replication_key = "SERVER_UPLOAD_TIME"
