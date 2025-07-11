@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # pylint: disable=missing-docstring,not-an-iterable,too-many-locals,too-many-arguments,too-many-branches,invalid-name,duplicate-code,too-many-statements
 
+from pprint import pprint
 import snowflake.connector
 import datetime
 import collections
 import itertools
+from itertools import dropwhile
 import copy
 import pendulum
+
 import singer
 import singer.metrics as metrics
 import singer.schema
@@ -20,31 +23,48 @@ from tap_amplitude.connection import connect_with_backoff
 import tap_amplitude.sync_strategies.incremental as sync_incremental
 
 Column = collections.namedtuple('Column', [
-    "table_schema", "table_name", "column_name", "data_type",
-    "character_maximum_length", "numeric_precision", "numeric_scale"
+    "table_schema",
+    "table_name",
+    "column_name",
+    "data_type",
+    "character_maximum_length",
+    "numeric_precision",
+    "numeric_scale"
 ])
 
 REQUIRED_CONFIG_KEYS = ['account', 'warehouse', 'database', 'username', 'password']
 LOGGER = singer.get_logger()
 
 def schema_for_column(c, inclusion='available'):
-    data_type = c.data_type.lower()
-    result = Schema(inclusion=inclusion)
+    STRING_SCHEMA = {'type': ['null', 'string']}
+    NUMBER_SCHEMA = {'type': ['null', 'number']}
+    DATETIME_SCHEMA = {'type': ['null', 'string'], 'format': 'date-time'}
 
-    if data_type in ['boolean']:
-        result.type = ['null', 'boolean']
-    elif data_type in ['number', 'real', 'float', 'fixed', 'integer', 'numeric']:
-        result.type = ['null', 'number']
-    elif data_type in ['text', 'string']:
-        result.type = ['null', 'string']
-    elif data_type in ['timestamp_ntz', 'datetime', 'date']:
-        result.type = ['null', 'string']
-        result.format = 'date-time'
-    elif data_type in ['variant', 'array', 'object']:
-        result.type = ['null', 'string']
-    else:
-        result = Schema(None, inclusion='unsupported', description=f'Unsupported column type {data_type}')
-    return result
+    SCHEMA_MAPPING = {
+        'boolean': {'type': ['null', 'boolean']},
+        'number': NUMBER_SCHEMA,
+        'real': NUMBER_SCHEMA,
+        'float': NUMBER_SCHEMA,
+        'fixed': NUMBER_SCHEMA,
+        'integer': NUMBER_SCHEMA,
+        'numeric': NUMBER_SCHEMA,
+        'text': STRING_SCHEMA,
+        'string': STRING_SCHEMA,
+        'timestamp_ntz': DATETIME_SCHEMA,
+        'datetime': DATETIME_SCHEMA,
+        'date': DATETIME_SCHEMA,
+        'variant': STRING_SCHEMA,
+        'array': STRING_SCHEMA,
+        'object': STRING_SCHEMA,
+    }
+
+    data_type = c.data_type.lower()
+    schema_kwargs = SCHEMA_MAPPING.get(data_type)
+
+    if schema_kwargs:
+        return Schema(**schema_kwargs, inclusion=inclusion)
+
+    return Schema(None, inclusion='unsupported', description=f'Unsupported column type {data_type}')
 
 def create_column_metadata(cols):
     mdata = {}
@@ -56,8 +76,13 @@ def create_column_metadata(cols):
 def discover_catalog(connection):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT table_schema, table_name, column_name, data_type,
-               character_maximum_length, numeric_precision, numeric_scale
+        SELECT table_schema,
+               table_name,
+               column_name,
+               data_type,
+               character_maximum_length,
+               numeric_precision,
+               numeric_scale
         FROM information_schema.columns
         WHERE table_schema != 'INFORMATION_SCHEMA'
         ORDER BY table_schema, table_name
@@ -88,14 +113,12 @@ def discover_catalog(connection):
             properties[c.column_name] = schema_for_column(c, incl)
 
         schema_obj = Schema(type="object", properties=properties)
+
         md_map = metadata.to_map(create_column_metadata(cols))
         md_map = metadata.write(md_map, (), "table-key-properties", key_properties)
-
+        md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key] if replication_key else [])
         if replication_key:
-            md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key])
             md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
-        else:
-            md_map = metadata.write(md_map, (), "valid-replication-keys", [])
 
         entry = CatalogEntry(
             stream=table,
@@ -105,20 +128,8 @@ def discover_catalog(connection):
             replication_key=replication_key,
             replication_method=replication_method
         )
-        entry.selected = True
 
-        # Select only key & replication fields
-        for md in entry.metadata:
-            breadcrumb = md.get("breadcrumb", [])
-            inclusion = md["metadata"].get("inclusion")
-
-            if not breadcrumb:
-                continue
-
-            field_name = breadcrumb[-1]
-            if inclusion != "unsupported" and field_name in {replication_key, *key_properties}:
-                md["metadata"]["selected"] = True
-
+        # No "selected": true assignments at any level — discovery only
         entries.append(entry)
 
     return Catalog(entries)
