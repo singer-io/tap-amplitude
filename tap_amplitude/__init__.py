@@ -95,17 +95,12 @@ def discover_catalog(connection):
         cols = list(cols_iter)
         available_cols = {c.column_name.upper(): c for c in cols}
 
-        preferred_keys = ["SERVER_UPLOAD_TIME", "TIME_CREATED", "EVENT_TIME", "MERGE_EVENT_TIME"]
-        rk = next((k for k in preferred_keys if k in available_cols), "")
-        if not rk:
-            for col in available_cols:
-                if col.endswith(("_TIME", "_TS", "_DATE")):
-                    rk = col
-                    break
-
-        replication_key = rk
-        replication_method = "INCREMENTAL" if replication_key else "FULL_TABLE"
-        key_properties = ["UUID"] if "UUID" in available_cols else []
+        key_properties = []
+        if "events" in table.lower():
+            key_properties.append("UUID")
+            replication_key = "SERVER_UPLOAD_TIME"
+        elif "merge" in table.lower():
+            replication_key = "MERGE_EVENT_TIME"
 
         properties = {}
         for c in cols:
@@ -117,6 +112,11 @@ def discover_catalog(connection):
         md_map = metadata.to_map(create_column_metadata(cols))
         md_map = metadata.write(md_map, (), "table-key-properties", key_properties)
         md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key] if replication_key else [])
+
+        if key_properties:
+            for key in key_properties:
+                md_map = metadata.write(md_map, ("properties", key), "inclusion", "automatic")
+
         if replication_key:
             md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
 
@@ -126,7 +126,7 @@ def discover_catalog(connection):
             schema=schema_obj,
             metadata=metadata.to_list(md_map),
             replication_key=replication_key,
-            replication_method=replication_method
+            replication_method= "INCREMENTAL" if replication_key else "FULL_TABLE"
         )
 
         # No "selected": true assignments at any level — discovery only
