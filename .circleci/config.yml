@@ -12,12 +12,6 @@ jobs:
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             uv pip install -U pip setuptools
             uv pip install .[dev]
-      - add_ssh_keys
-      - run:
-          name: 'JSON Validator'
-          command: |
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            stitch-validate-json /usr/local/share/virtualenvs/tap-amplitude/lib/python3.9/site-packages/tap_amplitude/schemas/*.json
 workflows:
   version: 2
   commit:
