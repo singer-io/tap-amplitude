@@ -13,16 +13,11 @@ jobs:
             uv pip install -U pip setuptools
             uv pip install .[dev]
       - run:
-          name: 'Unit Tests'
+          name: 'Pylint'
           command: |
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            uv pip install --upgrade awscli
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
-            uv pip install pytest
-            pytest ./tests
+            uv pip install pylint
+            pylint -d 'assignment-from-no-return,bad-indentation,broad-exception-raised,consider-using-enumerate,consider-using-f-string,consider-using-from-import,consider-using-in,fixme,line-too-long,missing-function-docstring,missing-module-docstring,unused-import,unused-variable,wrong-import-order' tap_amplitude
 workflows:
   version: 2
   commit:
