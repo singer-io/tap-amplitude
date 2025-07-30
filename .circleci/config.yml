@@ -1,0 +1,56 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+
+    steps:
+      - checkout
+
+      - run:
+          name: "Setup virtual env and install tap-amplitude"
+          command: |
+            python3 -m venv /usr/local/share/virtualenvs/tap-amplitude
+            source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
+            pip install -U "pip==22.2.2" "setuptools==65.3.0"
+            pip install -e .[dev]
+
+      - run:
+          name: "Set Dummy Snowflake Env Vars for CI"
+          command: |
+            echo 'export TAP_SNOWFLAKE_USERNAME=dummy_user' >> $BASH_ENV
+            echo 'export TAP_SNOWFLAKE_PASSWORD=dummy_pass' >> $BASH_ENV
+            echo 'export TAP_SNOWFLAKE_ACCOUNT=dummy_account' >> $BASH_ENV
+            echo 'export TAP_SNOWFLAKE_DATABASE=dummy_db' >> $BASH_ENV
+            echo 'export TAP_SNOWFLAKE_WAREHOUSE=dummy_wh' >> $BASH_ENV
+
+      - run:
+          name: "Run Pylint"
+          command: |
+            source $BASH_ENV
+            source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
+            pip install pylint
+            pylint tap_amplitude -d C,R,W
+
+      # TODO: <SAC-28011> Unit Tests are not running
+
+workflows:
+  version: 2
+
+  commit:
+    jobs:
+      - build:
+          context: circleci-user
+
+  build_daily:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - build:
+          context: circleci-user
