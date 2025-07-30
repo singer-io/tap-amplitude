@@ -1,48 +1,29 @@
-version: 2.1
-
+version: 2
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
-
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
     steps:
       - checkout
-
       - run:
-          name: "Setup virtual env and install tap-amplitude"
+          name: 'Setup virtual env'
           command: |
-            python3 -m venv /usr/local/share/virtualenvs/tap-amplitude
+            uv venv --python 3.11 /usr/local/share/virtualenvs/tap-amplitude
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
-            pip install -U "pip==22.2.2" "setuptools==65.3.0"
-            pip install -e .[dev]
-
+            uv pip install -U pip setuptools
+            uv pip install .[dev]
       - run:
-          name: "Set Dummy Snowflake Env Vars for CI"
+          name: 'Pylint'
           command: |
-            echo 'export TAP_SNOWFLAKE_USERNAME=dummy_user' >> $BASH_ENV
-            echo 'export TAP_SNOWFLAKE_PASSWORD=dummy_pass' >> $BASH_ENV
-            echo 'export TAP_SNOWFLAKE_ACCOUNT=dummy_account' >> $BASH_ENV
-            echo 'export TAP_SNOWFLAKE_DATABASE=dummy_db' >> $BASH_ENV
-            echo 'export TAP_SNOWFLAKE_WAREHOUSE=dummy_wh' >> $BASH_ENV
-
-      - run:
-          name: "Run Pylint"
-          command: |
-            source $BASH_ENV
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
-            pip install pylint
-            pylint tap_amplitude -d C,R,W
-
-      # TODO: <SAC-28011> Unit Tests are not running
-
+            uv pip install pylint
+            pylint -d 'assignment-from-no-return,bad-indentation,broad-exception-raised,consider-using-enumerate,consider-using-f-string,consider-using-from-import,consider-using-in,fixme,line-too-long,missing-function-docstring,missing-module-docstring,unused-import,unused-variable,wrong-import-order,too-many-locals' tap_amplitude
 workflows:
   version: 2
-
   commit:
     jobs:
       - build:
           context: circleci-user
-
   build_daily:
     triggers:
       - schedule:
