@@ -113,6 +113,7 @@ def discover_catalog(connection):
         md_map = metadata.to_map(create_column_metadata(cols))
         md_map = metadata.write(md_map, (), "table-key-properties", key_properties)
         md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key] if replication_key else [])
+        md_map = metadata.write(md_map, (), "forced-replication-method", "INCREMENTAL" if replication_key else "FULL_TABLE")
 
         if key_properties:
             for key in key_properties:
