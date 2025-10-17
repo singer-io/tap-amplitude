@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.0
+  * Added forced-replication-method metadata field [#14](https://github.com/singer-io/tap-amplitude/pull/14)
+
 ## 1.2.0
   * Upgrade the dependencies [#7](https://github.com/singer-io/tap-amplitude/pull/7)
 
