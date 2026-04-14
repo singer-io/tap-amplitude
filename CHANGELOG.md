@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.1
+  * Bumped snowflake-connector-python to address vulnerability CVE-2026-27459
+
 ## 1.3.0
   * Added forced-replication-method metadata field [#14](https://github.com/singer-io/tap-amplitude/pull/14)
 
