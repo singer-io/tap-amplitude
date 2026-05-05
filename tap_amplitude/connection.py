@@ -73,7 +73,7 @@ def _patch_user_agent() -> None:
 def _redact_headers(headers: dict) -> dict:
     return {k: (_REDACTED if k in _SENSITIVE_HEADERS else v) for k, v in headers.items()}
 
-
+# pylint: disable=too-many-positional-arguments
 def _patched_handle_unknown_error(self, method, full_url, headers, data, conn) -> None:
     if data:
         _, masked_data, err_str = SecretDetector.mask_secrets(data)
@@ -99,7 +99,7 @@ def _patched_handle_unknown_error(self, method, full_url, headers, data, conn) -
 # Patch 4 – suppress exception telemetry (error msgs + stack traces)
 # ---------------------------------------------------------------------------
 
-def _noop_send_exception_telemetry(self, connection, telemetry_data) -> None:
+def _noop_send_exception_telemetry(self, _connection, _telemetry_data) -> None:
     pass
 
 
@@ -115,9 +115,8 @@ def _noop_log_telemetry_imported_packages(self) -> None:
 # Patch 6 – remove exc_info=True from HTTP-error log line
 # ---------------------------------------------------------------------------
 
-def _patched_log_and_handle_http_error_with_cause(
-    self, e, full_url, method, retry_timeout, retry_count, conn, timed_out=True
-) -> None:
+# pylint: disable=too-many-positional-arguments
+def _patched_log_and_handle_http_error_with_cause(self, e, full_url, _method, _retry_timeout, _retry_count, conn, _timed_out=True) -> None:
     cause = e.args[0]
     _sf_network.logger.error(cause)  # exc_info removed: no file-path traceback
     if isinstance(cause, Error):
@@ -130,7 +129,7 @@ def _patched_log_and_handle_http_error_with_cause(
 # Patch 7 – sanitise raw cause from certificate-error caller-facing message
 # ---------------------------------------------------------------------------
 
-def _patched_handle_invalid_certificate_error(self, conn, full_url, cause) -> None:
+def _patched_handle_invalid_certificate_error(self, conn, _full_url, _cause) -> None:
     Error.errorhandler_wrapper(
         conn, None, OperationalError,
         {
@@ -163,6 +162,7 @@ Auth.base_auth_data = staticmethod(_patched_base_auth_data)             # 1
 _patch_user_agent()                                                     # 2
 SnowflakeRestful._handle_unknown_error = _patched_handle_unknown_error  # 3
 Error.send_exception_telemetry = _noop_send_exception_telemetry         # 4
+#  pylint: disable=protected-access
 SnowflakeConnection._log_telemetry_imported_packages = (                # 5
     _noop_log_telemetry_imported_packages
 )
