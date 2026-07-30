@@ -2,6 +2,11 @@
 
 import backoff
 import snowflake.connector
+import snowflake.connector.network
+
+# Override the default User-Agent to prevent disclosure of system details
+# (OS version, Python version, connector version) in HTTP request headers.
+snowflake.connector.network.PYTHON_CONNECTOR_USER_AGENT = "tap-amplitude"
 
 
 @backoff.on_exception(backoff.expo,

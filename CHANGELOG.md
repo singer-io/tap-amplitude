@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.2
+  * Fix information disclosure of system details (OS, Python version, connector version) in HTTP request headers
+
 ## 1.3.1
   * Bumped snowflake-connector-python to address vulnerability CVE-2026-27459
 
