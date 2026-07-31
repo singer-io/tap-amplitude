@@ -1,7 +1,8 @@
 import unittest
 from unittest import mock
 
-from singer.catalog import Catalog, CatalogEntry, Schema
+from singer.catalog import Catalog, CatalogEntry
+from singer.schema import Schema
 
 import tap_amplitude
 
