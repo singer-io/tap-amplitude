@@ -8,7 +8,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            uv venv --python 3.11 /usr/local/share/virtualenvs/tap-amplitude
+            uv venv --python 3.12 /usr/local/share/virtualenvs/tap-amplitude
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             uv pip install -U pip setuptools
             uv pip install .[dev]
@@ -18,6 +18,30 @@ jobs:
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             uv pip install pylint
             pylint -d 'assignment-from-no-return,bad-indentation,broad-exception-raised,consider-using-enumerate,consider-using-f-string,consider-using-from-import,consider-using-in,fixme,line-too-long,missing-function-docstring,missing-module-docstring,unused-import,unused-variable,wrong-import-order,too-many-locals' tap_amplitude
+      - run:
+          name: 'Unit Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
+            uv pip install pytest coverage
+            mkdir -p test_output
+            coverage run --source=tap_amplitude -m pytest tests/unittests -v --junitxml=test_output/unit-report.xml
+      - run:
+          name: 'Mocked Integration Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
+            coverage run --source=tap_amplitude --append -m pytest tests/mockedtests -v --junitxml=test_output/integration-report.xml
+      - run:
+          name: 'Coverage Report'
+          command: |
+            source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
+            coverage report -m --fail-under=99 | tee coverage.txt
+            coverage html
+      - store_test_results:
+          path: test_output
+      - store_artifacts:
+          path: htmlcov
+      - store_artifacts:
+          path: coverage.txt
 workflows:
   version: 2
   commit:

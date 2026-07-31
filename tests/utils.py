@@ -3,13 +3,17 @@ from pprint import pprint
 
 import os
 import singer
-from nose.tools import nottest
 
 from singer import get_logger
 from tap_amplitude.connection import connect_with_backoff
 
 
 LOGGER = get_logger()
+
+
+def nottest(func):
+    func.__test__ = False
+    return func
 
 
 def get_test_snowflake_config():

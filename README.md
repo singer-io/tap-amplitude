@@ -5,7 +5,7 @@ Singer tap that extracts data from Amplitude via a Snowflake database and produc
 ## Requirements
 
 - pip3
-- python 3.5+
+- python 3.12+
 - mkvirtualenv
 
 ## Installation
