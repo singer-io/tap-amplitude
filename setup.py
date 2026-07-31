@@ -3,14 +3,11 @@
 from setuptools import setup
 
 setup(name='tap-amplitude',
-      version='1.3.1',
+      version='1.4.0',
       description='Singer.io tap for extracting data from Amplitude via Snowflake',
       author='Stitch',
       url='https://singer.io',
-      classifiers=['Programming Language :: Python :: 3 :: Only',
-                   'Programming Language :: Python :: 3.12'],
-      python_requires='>=3.12',
-      py_modules=['tap_amplitude'],
+      classifiers=['Programming Language :: Python :: 3 :: Only'],
       install_requires=[
           'snowflake-connector-python==4.7.1',
           'attrs==26.1.0',
