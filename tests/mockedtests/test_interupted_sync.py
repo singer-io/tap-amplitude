@@ -2,7 +2,8 @@ import datetime
 import unittest
 from unittest import mock
 
-from singer.catalog import CatalogEntry, Schema
+from singer.catalog import CatalogEntry
+from singer.schema import Schema
 
 import tap_amplitude.sync_strategies.incremental as incremental
 
@@ -85,7 +86,7 @@ def _entry():
     )
 
 
-class TestInteruptedSync(unittest.TestCase):
+class TestInterruptedSync(unittest.TestCase):
     @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_state")
     @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_bookmark")
     @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_record")

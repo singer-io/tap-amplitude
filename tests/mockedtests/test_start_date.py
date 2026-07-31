@@ -3,7 +3,8 @@ import re
 import unittest
 from unittest import mock
 
-from singer.catalog import CatalogEntry, Schema
+from singer.catalog import CatalogEntry
+from singer.schema import Schema
 
 import tap_amplitude.sync_strategies.incremental as incremental
 
