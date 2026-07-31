@@ -2,6 +2,7 @@ import datetime
 import unittest
 from unittest import mock
 
+import pytz
 from singer.catalog import CatalogEntry
 from singer.schema import Schema
 
@@ -199,3 +200,42 @@ class TestIncremental(unittest.TestCase):
         mock_write_bookmark.assert_any_call(state, "PUBLIC-events", "SERVER_UPLOAD_TIME", None)
         self.assertIn("ORDER BY SERVER_UPLOAD_TIME ASC", cursor.last_sql)
         self.assertNotIn("WHERE", cursor.last_sql)
+
+    @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_state")
+    @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_bookmark")
+    @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_record")
+    @mock.patch("tap_amplitude.sync_strategies.incremental.metrics.record_counter")
+    @mock.patch("tap_amplitude.sync_strategies.incremental.Transformer", return_value=_DummyTransformerContext())
+    def test_sync_table_serializes_pytz_aware_datetime_values(
+        self,
+        _mock_transformer,
+        mock_record_counter,
+        mock_write_record,
+        _mock_write_bookmark,
+        _mock_write_state,
+    ):
+        metadata_list = [
+            {"breadcrumb": ["properties", "UUID"], "metadata": {"selected": True}},
+            {"breadcrumb": ["properties", "SERVER_UPLOAD_TIME"], "metadata": {"inclusion": "automatic"}},
+        ]
+        entry = _catalog_entry(metadata_list)
+        state = {}
+
+        eastern = pytz.timezone("US/Eastern")
+        aware_dt = eastern.localize(datetime.datetime(2026, 1, 1, 10, 30, 0))
+        cursor = _FakeCursor([("id-1", aware_dt)])
+        connection = _FakeConnection(cursor)
+
+        counter = _DummyCounter()
+        mock_record_counter.return_value = _DummyCounterContext(counter)
+
+        incremental.sync_table(
+            connection,
+            entry,
+            state,
+            ["UUID", "SERVER_UPLOAD_TIME"],
+        )
+
+        written_record = mock_write_record.call_args[0][1]
+        self.assertEqual("id-1", written_record["UUID"])
+        self.assertIn("-05:00", written_record["SERVER_UPLOAD_TIME"])
