@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=duplicate-code
 
-import pytz
 import datetime
 import pendulum
 import singer

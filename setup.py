@@ -10,9 +10,7 @@ setup(name='tap-amplitude',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       install_requires=[
           'snowflake-connector-python==4.7.1',
-          'attrs==26.1.0',
           'pendulum==3.2.0',
-          'pytz==2026.3.post1',
           'singer-python==6.8.0',
           'backoff==2.2.1'
       ],
