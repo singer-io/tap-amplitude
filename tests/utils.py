@@ -11,11 +11,6 @@ from tap_amplitude.connection import connect_with_backoff
 LOGGER = get_logger()
 
 
-def nottest(func):
-    func.__test__ = False
-    return func
-
-
 def get_test_snowflake_config():
     missing_envs = [x for x in [os.getenv('TAP_SNOWFLAKE_USERNAME'),
                                 os.getenv('TAP_SNOWFLAKE_PASSWORD'),
@@ -44,7 +39,6 @@ def build_col_sql(col):
     return "{} {}".format(col['name'], col['type'])
 
 
-@nottest
 def ensure_test_table(con, table_spec):
     col_sql = map(lambda c: build_col_sql(c), table_spec['columns'])
     with con.cursor() as cursor:
