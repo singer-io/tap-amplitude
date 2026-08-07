@@ -2,6 +2,7 @@
 # pylint: disable=duplicate-code
 
 import datetime
+import json
 import pendulum
 import singer
 import singer.metrics as metrics
@@ -41,7 +42,14 @@ def generate_select_sql(tap_stream_id, selected_columns):
 
 
 def process_row(row, columns):
-    return dict(zip(columns, list(row)))
+    rec = {}
+    for col, val in zip(columns, list(row)):
+        # Snowflake VARIANT/ARRAY/OBJECT columns return as dict/list;
+        # schema expects string, so serialize them to JSON.
+        if isinstance(val, (dict, list)):
+            val = json.dumps(val)
+        rec[col] = val
+    return rec
 
 
 def sync_table(connection, catalog_entry, state, columns):

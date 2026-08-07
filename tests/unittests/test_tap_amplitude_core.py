@@ -94,20 +94,31 @@ class TestTapAmplitudeCore(unittest.TestCase):
             ("PUBLIC", "events_table", "UUID", "STRING", None, None, None),
             ("PUBLIC", "events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
             ("PUBLIC", "merge_table", "MERGE_EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "AMPLITUDE_MERGE_EVENTS", "MERGE_EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "AMPLITUDE_MERGE_EVENTS", "MERGE_ID", "STRING", None, None, None),
             ("PUBLIC", "other_table", "FIELD", "STRING", None, None, None),
         ]
         connection = _FakeConnection(records)
 
         catalog = tap_amplitude.discover_catalog(connection)
 
-        self.assertEqual(3, len(catalog.streams))
+        self.assertEqual(4, len(catalog.streams))
         events_entry = next(s for s in catalog.streams if s.stream == "events_table")
         merge_entry = next(s for s in catalog.streams if s.stream == "merge_table")
+        amplitude_merge_entry = next(s for s in catalog.streams if s.stream == "AMPLITUDE_MERGE_EVENTS")
         other_entry = next(s for s in catalog.streams if s.stream == "other_table")
 
         self.assertEqual("SERVER_UPLOAD_TIME", events_entry.replication_key)
         self.assertEqual("INCREMENTAL", events_entry.replication_method)
         self.assertEqual("MERGE_EVENT_TIME", merge_entry.replication_key)
+        self.assertEqual("MERGE_EVENT_TIME", amplitude_merge_entry.replication_key)
+
+        amplitude_merge_md = {
+            tuple(item["breadcrumb"]): item["metadata"]
+            for item in amplitude_merge_entry.metadata
+        }
+        self.assertNotIn(("properties", "UUID"), amplitude_merge_md)
+        self.assertNotIn(("properties", "SERVER_UPLOAD_TIME"), amplitude_merge_md)
         self.assertEqual("FULL_TABLE", other_entry.replication_method)
 
     @mock.patch("tap_amplitude.discover_catalog")

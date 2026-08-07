@@ -97,11 +97,11 @@ def discover_catalog(connection):
 
         key_properties = []
         replication_key = None
-        if "events" in table.lower():
+        if "merge" in table.lower():
+            replication_key = "MERGE_EVENT_TIME"
+        elif "events" in table.lower():
             key_properties.append("UUID")
             replication_key = "SERVER_UPLOAD_TIME"
-        elif "merge" in table.lower():
-            replication_key = "MERGE_EVENT_TIME"
 
         properties = {}
         for c in cols:
