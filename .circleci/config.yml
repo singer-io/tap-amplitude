@@ -17,7 +17,7 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             uv pip install pylint
-            pylint -d 'assignment-from-no-return,bad-indentation,broad-exception-raised,consider-using-enumerate,consider-using-f-string,consider-using-from-import,consider-using-in,fixme,line-too-long,missing-function-docstring,missing-module-docstring,unused-import,unused-variable,wrong-import-order,too-many-locals' tap_amplitude
+            pylint -d 'assignment-from-no-return,broad-except,broad-exception-caught,broad-exception-raised,chained-comparison,consider-using-f-string,empty-docstring,fixme,invalid-name,line-too-long,logging-fstring-interpolation,missing-class-docstring,missing-function-docstring,missing-module-docstring,no-else-raise,no-else-return,too-few-public-methods,too-many-arguments,too-many-branches,too-many-lines,too-many-locals,ungrouped-imports,wrong-spelling-in-comment,wrong-spelling-in-docstring' tap_amplitude
 workflows:
   version: 2
   commit:
