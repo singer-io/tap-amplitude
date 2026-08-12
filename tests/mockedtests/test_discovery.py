@@ -36,8 +36,8 @@ class TestDiscovery(unittest.TestCase):
         streams = {entry.stream: entry for entry in catalog.streams}
 
         self.assertEqual(2, len(catalog.streams))
-        self.assertIn("events_table", streams)
-        self.assertIn("merge_table", streams)
-        self.assertEqual("SERVER_UPLOAD_TIME", streams["events_table"].replication_key)
-        self.assertEqual("MERGE_EVENT_TIME", streams["merge_table"].replication_key)
+        self.assertIn("PUBLIC-events_table", streams)
+        self.assertIn("PUBLIC-merge_table", streams)
+        self.assertEqual("SERVER_UPLOAD_TIME", streams["PUBLIC-events_table"].replication_key)
+        self.assertEqual("MERGE_EVENT_TIME", streams["PUBLIC-merge_table"].replication_key)
         self.assertIn("information_schema.columns", connection._cursor.executed_sql)
