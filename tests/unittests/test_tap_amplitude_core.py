@@ -103,15 +103,17 @@ class TestTapAmplitudeCore(unittest.TestCase):
         catalog = tap_amplitude.discover_catalog(connection)
 
         self.assertEqual(4, len(catalog.streams))
-        events_entry = next(s for s in catalog.streams if s.stream == "events_table")
-        merge_entry = next(s for s in catalog.streams if s.stream == "merge_table")
-        amplitude_merge_entry = next(s for s in catalog.streams if s.stream == "AMPLITUDE_MERGE_EVENTS")
-        other_entry = next(s for s in catalog.streams if s.stream == "other_table")
+        events_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-events_table")
+        merge_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-merge_table")
+        amplitude_merge_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-AMPLITUDE_MERGE_EVENTS")
+        other_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-other_table")
 
         self.assertEqual("SERVER_UPLOAD_TIME", events_entry.replication_key)
         self.assertEqual("INCREMENTAL", events_entry.replication_method)
         self.assertEqual("MERGE_EVENT_TIME", merge_entry.replication_key)
         self.assertEqual("MERGE_EVENT_TIME", amplitude_merge_entry.replication_key)
+        self.assertEqual(["UUID"], events_entry.key_properties)
+        self.assertEqual(["MERGE_ID"], amplitude_merge_entry.key_properties)
 
         amplitude_merge_md = {
             tuple(item["breadcrumb"]): item["metadata"]

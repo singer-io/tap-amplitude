@@ -94,11 +94,14 @@ def discover_catalog(connection):
     for (schema, table), cols_iter in itertools.groupby(columns, key=lambda c: (c.table_schema, c.table_name)):
         cols = list(cols_iter)
         available_cols = {c.column_name.upper(): c for c in cols}
+        tap_stream_id = f"{schema}-{table}"
 
         key_properties = []
         replication_key = None
         if "merge" in table.lower():
             replication_key = "MERGE_EVENT_TIME"
+            if "MERGE_ID" in available_cols:
+                key_properties.append("MERGE_ID")
         elif "events" in table.lower():
             key_properties.append("UUID")
             replication_key = "SERVER_UPLOAD_TIME"
@@ -111,6 +114,7 @@ def discover_catalog(connection):
         schema_obj = Schema(type="object", properties=properties)
 
         md_map = metadata.to_map(create_column_metadata(cols))
+        md_map = metadata.write(md_map, (), "inclusion", "available")
         md_map = metadata.write(md_map, (), "table-key-properties", key_properties)
         md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key] if replication_key else [])
         md_map = metadata.write(md_map, (), "forced-replication-method", "INCREMENTAL" if replication_key else "FULL_TABLE")
@@ -123,10 +127,11 @@ def discover_catalog(connection):
             md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
 
         entry = CatalogEntry(
-            stream=table,
-            tap_stream_id=f"{schema}-{table}",
+            stream=tap_stream_id,
+            tap_stream_id=tap_stream_id,
             schema=schema_obj,
             metadata=metadata.to_list(md_map),
+            key_properties=key_properties,
             replication_key=replication_key,
             replication_method= "INCREMENTAL" if replication_key else "FULL_TABLE"
         )
