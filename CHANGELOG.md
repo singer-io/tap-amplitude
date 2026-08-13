@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.4.0
+  * Upgrade python, upgrade dependencies, added unitests, added mocked integration tests [#20](https://github.com/singer-io/tap-amplitude/pull/20)
+
 ## 1.3.1
   * Bumped snowflake-connector-python to address vulnerability CVE-2026-27459
 

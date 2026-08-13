@@ -46,7 +46,7 @@ class TestEventsTable(unittest.TestCase):
 
         stream_dict = test_streams[0]
         self.assertEqual(TestEventsTable.table_name, stream_dict.get('table_name'))
-        self.assertEqual(TestEventsTable.table_name, stream_dict.get('stream'))
+        self.assertEqual("{}-{}".format(TestEventsTable.schema_name, TestEventsTable.table_name), stream_dict.get('stream'))
 
         # Check primary key is "UUID".
         mdata = metadata.to_map(stream_dict['metadata'])
@@ -91,7 +91,7 @@ class TestMergeTable(unittest.TestCase):
         # Check table_stream and stream name.
         stream_dict = test_streams[0]
         self.assertEqual(TestMergeTable.table_name, stream_dict.get('table_name'))
-        self.assertEqual(TestMergeTable.table_name, stream_dict.get('stream'))
+        self.assertEqual("{}-{}".format(TestMergeTable.schema_name, TestMergeTable.table_name), stream_dict.get('stream'))
 
         # Check that there is no key property.
         mdata = metadata.to_map(stream_dict['metadata'])
