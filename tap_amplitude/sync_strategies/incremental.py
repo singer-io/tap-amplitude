@@ -70,7 +70,6 @@ def generate_record_hash(record):
 
 def sync_table(connection, catalog_entry, state, columns):
     replication_key_value = None
-    is_merge_table = "merge" in catalog_entry.tap_stream_id.lower()
 
     # Bookmark logic
     if not state.get('bookmarks', {}).get(catalog_entry.tap_stream_id):
@@ -128,7 +127,7 @@ def sync_table(connection, catalog_entry, state, columns):
                     rec[k] = v.isoformat()
 
             # Generate hash for merge tables before transformation
-            if is_merge_table:
+            if "merge" in catalog_entry.tap_stream_id.lower():
                 rec['_SDC_RECORD_HASH'] = generate_record_hash(rec)
 
             # Apply transformations
