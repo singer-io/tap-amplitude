@@ -68,7 +68,6 @@ def sync_table(connection, catalog_entry, state, columns):
 
     # Prepare selected fields for SQL
     selected_columns = get_selected_columns(catalog_entry, columns)
-
     tap_stream_id = catalog_entry.tap_stream_id.replace('-', '.')
     select_sql = generate_select_sql(tap_stream_id, selected_columns)
 

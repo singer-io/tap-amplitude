@@ -98,9 +98,8 @@ def discover_catalog(connection):
 
         key_properties = []
         replication_key = None
-        is_merge_table = "merge" in table.lower()
 
-        if is_merge_table:
+        if "merge" in table.lower():
             # Merge tables have no primary key
             replication_key = "MERGE_EVENT_TIME"
         elif "events" in table.lower():
