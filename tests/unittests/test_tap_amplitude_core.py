@@ -113,7 +113,9 @@ class TestTapAmplitudeCore(unittest.TestCase):
         self.assertEqual("MERGE_EVENT_TIME", merge_entry.replication_key)
         self.assertEqual("MERGE_EVENT_TIME", amplitude_merge_entry.replication_key)
         self.assertEqual(["UUID"], events_entry.key_properties)
-        self.assertEqual(["MERGE_ID"], amplitude_merge_entry.key_properties)
+# Merge tables have no primary key
+        self.assertEqual([], merge_entry.key_properties)
+        self.assertEqual([], amplitude_merge_entry.key_properties)
 
         amplitude_merge_md = {
             tuple(item["breadcrumb"]): item["metadata"]
@@ -121,6 +123,8 @@ class TestTapAmplitudeCore(unittest.TestCase):
         }
         self.assertNotIn(("properties", "UUID"), amplitude_merge_md)
         self.assertNotIn(("properties", "SERVER_UPLOAD_TIME"), amplitude_merge_md)
+        # Verify MERGE_EVENT_TIME is automatic for merge tables
+        self.assertEqual("automatic", amplitude_merge_md.get(("properties", "MERGE_EVENT_TIME"), {}).get("inclusion"))
         self.assertEqual("FULL_TABLE", other_entry.replication_method)
 
     @mock.patch("tap_amplitude.discover_catalog")
