@@ -70,6 +70,7 @@ def generate_record_hash(record):
 
 def sync_table(connection, catalog_entry, state, columns):
     replication_key_value = None
+    is_merge_table = "merge" in catalog_entry.tap_stream_id.lower()
 
     # Bookmark logic
     if not state.get('bookmarks', {}).get(catalog_entry.tap_stream_id):
@@ -111,7 +112,6 @@ def sync_table(connection, catalog_entry, state, columns):
 
     row = cursor.fetchone()
     rows_saved = 0
-    is_merge_table = "merge" in catalog_entry.tap_stream_id.lower()
 
     with metrics.record_counter(catalog_entry.tap_stream_id) as counter:
         counter.tags['table'] = catalog_entry.stream
