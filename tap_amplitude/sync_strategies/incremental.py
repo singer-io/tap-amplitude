@@ -60,10 +60,10 @@ def generate_record_hash(record):
     """
     # Sort keys to ensure deterministic hash
     sorted_items = sorted(record.items())
-    
+
     # Create a string representation of all values
     hash_input = json.dumps(sorted_items, sort_keys=True, default=str)
-    
+
     # Generate MD5 hash
     return hashlib.md5(hash_input.encode('utf-8')).hexdigest()
 
