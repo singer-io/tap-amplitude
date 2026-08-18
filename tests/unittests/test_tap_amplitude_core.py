@@ -113,7 +113,13 @@ class TestTapAmplitudeCore(unittest.TestCase):
         self.assertEqual("MERGE_EVENT_TIME", merge_entry.replication_key)
         self.assertEqual("MERGE_EVENT_TIME", amplitude_merge_entry.replication_key)
         self.assertEqual(["UUID"], events_entry.key_properties)
-        self.assertEqual(["MERGE_ID"], amplitude_merge_entry.key_properties)
+        # Merge tables now use synthetic _SDC_RECORD_HASH as primary key
+        self.assertEqual(["_SDC_RECORD_HASH"], merge_entry.key_properties)
+        self.assertEqual(["_SDC_RECORD_HASH"], amplitude_merge_entry.key_properties)
+        
+        # Verify _SDC_RECORD_HASH field is in the schema for merge tables
+        self.assertIn("_SDC_RECORD_HASH", merge_entry.schema.properties)
+        self.assertIn("_SDC_RECORD_HASH", amplitude_merge_entry.schema.properties)
 
         amplitude_merge_md = {
             tuple(item["breadcrumb"]): item["metadata"]
@@ -121,6 +127,8 @@ class TestTapAmplitudeCore(unittest.TestCase):
         }
         self.assertNotIn(("properties", "UUID"), amplitude_merge_md)
         self.assertNotIn(("properties", "SERVER_UPLOAD_TIME"), amplitude_merge_md)
+        # Verify _SDC_RECORD_HASH is automatic
+        self.assertEqual("automatic", amplitude_merge_md.get(("properties", "_SDC_RECORD_HASH"), {}).get("inclusion"))
         self.assertEqual("FULL_TABLE", other_entry.replication_method)
 
     @mock.patch("tap_amplitude.discover_catalog")

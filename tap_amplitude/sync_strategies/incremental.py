@@ -6,6 +6,7 @@ import json
 import pendulum
 import singer
 import singer.metrics as metrics
+import hashlib
 
 from singer import Transformer
 from singer import metadata
@@ -52,6 +53,21 @@ def process_row(row, columns):
     return rec
 
 
+def generate_record_hash(record):
+    """
+    Generate a deterministic hash for a record based on all its values.
+    Sorts keys to ensure consistent ordering.
+    """
+    # Sort keys to ensure deterministic hash
+    sorted_items = sorted(record.items())
+    
+    # Create a string representation of all values
+    hash_input = json.dumps(sorted_items, sort_keys=True, default=str)
+    
+    # Generate MD5 hash
+    return hashlib.md5(hash_input.encode('utf-8')).hexdigest()
+
+
 def sync_table(connection, catalog_entry, state, columns):
     replication_key_value = None
 
@@ -90,6 +106,7 @@ def sync_table(connection, catalog_entry, state, columns):
 
     row = cursor.fetchone()
     rows_saved = 0
+    is_merge_table = "merge" in catalog_entry.tap_stream_id.lower()
 
     with metrics.record_counter(catalog_entry.tap_stream_id) as counter:
         counter.tags['table'] = catalog_entry.stream
@@ -104,6 +121,10 @@ def sync_table(connection, catalog_entry, state, columns):
             for k, v in rec.items():
                 if isinstance(v, (datetime.datetime, datetime.date)):
                     rec[k] = v.isoformat()
+
+            # Generate hash for merge tables before transformation
+            if is_merge_table:
+                rec['_SDC_RECORD_HASH'] = generate_record_hash(rec)
 
             # Apply transformations
             with Transformer() as transformer:
