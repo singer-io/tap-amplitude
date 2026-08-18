@@ -9,7 +9,6 @@ import itertools
 from itertools import dropwhile
 import copy
 import pendulum
-import hashlib
 
 import singer
 import singer.metrics as metrics
@@ -102,19 +101,13 @@ def discover_catalog(connection):
         is_merge_table = "merge" in table.lower()
 
         if is_merge_table:
-            # For merge tables, use a synthetic hash as the primary key
-            key_properties.append("_SDC_RECORD_HASH")
+            # Merge tables have no primary key
             replication_key = "MERGE_EVENT_TIME"
         elif "events" in table.lower():
             key_properties.append("UUID")
             replication_key = "SERVER_UPLOAD_TIME"
 
         properties = {}
-
-        # Add synthetic _SDC_RECORD_HASH field for merge tables
-        if is_merge_table:
-            properties["_SDC_RECORD_HASH"] = Schema(type=['string'], inclusion='automatic')
-
         for c in cols:
             incl = "automatic" if c.column_name.upper() in {replication_key, *key_properties} else "available"
             properties[c.column_name] = schema_for_column(c, incl)

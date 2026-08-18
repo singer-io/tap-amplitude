@@ -43,11 +43,9 @@ class TestDiscovery(unittest.TestCase):
         self.assertEqual(["UUID"], streams["PUBLIC-events_table"].key_properties)
         self.assertEqual("SERVER_UPLOAD_TIME", streams["PUBLIC-events_table"].replication_key)
         
-        # Merge table should have synthetic _SDC_RECORD_HASH as key and MERGE_EVENT_TIME as replication key
-        self.assertEqual(["_SDC_RECORD_HASH"], streams["PUBLIC-merge_table"].key_properties)
+        # Merge table should have no primary key and MERGE_EVENT_TIME as replication key
+        self.assertEqual([], streams["PUBLIC-merge_table"].key_properties)
         self.assertEqual("MERGE_EVENT_TIME", streams["PUBLIC-merge_table"].replication_key)
-        # Verify _SDC_RECORD_HASH is in the schema
-        self.assertIn("_SDC_RECORD_HASH", streams["PUBLIC-merge_table"].schema.properties)
         
         self.assertIn("information_schema.columns", connection._cursor.executed_sql)
 
@@ -66,11 +64,9 @@ class TestDiscovery(unittest.TestCase):
         self.assertEqual(1, len(catalog.streams))
         self.assertIn("PUBLIC-merge_events", streams)
         
-        # Merge table now uses synthetic _SDC_RECORD_HASH as primary key instead of MERGE_ID
-        self.assertEqual(["_SDC_RECORD_HASH"], streams["PUBLIC-merge_events"].key_properties)
+        # Merge table has no primary key
+        self.assertEqual([], streams["PUBLIC-merge_events"].key_properties)
         self.assertEqual("MERGE_EVENT_TIME", streams["PUBLIC-merge_events"].replication_key)
-        # Verify _SDC_RECORD_HASH is in the schema
-        self.assertIn("_SDC_RECORD_HASH", streams["PUBLIC-merge_events"].schema.properties)
 
     def test_discovery_events_table_without_expected_columns(self):
         """Test events tables that don't have UUID or SERVER_UPLOAD_TIME columns."""

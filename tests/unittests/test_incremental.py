@@ -115,24 +115,6 @@ class TestIncremental(unittest.TestCase):
         result = incremental.process_row(row, ["a", "b"])
         self.assertEqual({"a": "abc", "b": 1}, result)
 
-    def test_generate_record_hash(self):
-        # Test that the same record produces the same hash
-        rec1 = {"a": "value1", "b": 2, "c": None}
-        rec2 = {"a": "value1", "b": 2, "c": None}
-        hash1 = incremental.generate_record_hash(rec1)
-        hash2 = incremental.generate_record_hash(rec2)
-        self.assertEqual(hash1, hash2)
-        
-        # Test that different records produce different hashes
-        rec3 = {"a": "value2", "b": 2, "c": None}
-        hash3 = incremental.generate_record_hash(rec3)
-        self.assertNotEqual(hash1, hash3)
-        
-        # Test that key order doesn't matter (deterministic)
-        rec4 = {"c": None, "a": "value1", "b": 2}
-        hash4 = incremental.generate_record_hash(rec4)
-        self.assertEqual(hash1, hash4)
-
     @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_state")
     @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_bookmark")
     @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_record")
@@ -218,72 +200,3 @@ class TestIncremental(unittest.TestCase):
         mock_write_bookmark.assert_any_call(state, "PUBLIC-events", "SERVER_UPLOAD_TIME", None)
         self.assertIn("ORDER BY SERVER_UPLOAD_TIME ASC", cursor.last_sql)
         self.assertNotIn("WHERE", cursor.last_sql)
-
-    @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_state")
-    @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_bookmark")
-    @mock.patch("tap_amplitude.sync_strategies.incremental.singer.write_record")
-    @mock.patch("tap_amplitude.sync_strategies.incremental.metrics.record_counter")
-    @mock.patch("tap_amplitude.sync_strategies.incremental.Transformer", return_value=_DummyTransformerContext())
-    def test_sync_merge_table_adds_hash(
-        self,
-        _mock_transformer,
-        mock_record_counter,
-        mock_write_record,
-        _mock_write_bookmark,
-        _mock_write_state,
-    ):
-        # Test that merge tables get _SDC_RECORD_HASH added
-        metadata_list = [
-            {"breadcrumb": ["properties", "_SDC_RECORD_HASH"], "metadata": {"inclusion": "automatic"}},
-            {"breadcrumb": ["properties", "MERGE_EVENT_TIME"], "metadata": {"inclusion": "automatic"}},
-            {"breadcrumb": ["properties", "FIELD1"], "metadata": {"selected": True}},
-        ]
-        schema = Schema.from_dict(
-            {
-                "type": "object",
-                "properties": {
-                    "_SDC_RECORD_HASH": {"type": ["string"]},
-                    "MERGE_EVENT_TIME": {"type": ["null", "string"], "format": "date-time"},
-                    "FIELD1": {"type": ["null", "string"]},
-                },
-            }
-        )
-        entry = CatalogEntry(
-            stream="merge_table",
-            tap_stream_id="PUBLIC-merge_table",
-            schema=schema,
-            metadata=metadata_list,
-            replication_key="MERGE_EVENT_TIME",
-            replication_method="INCREMENTAL",
-        )
-        
-        state = {}
-        rows = [("value1", datetime.datetime(2026, 1, 1, 0, 0, 0))]
-        cursor = _FakeCursor(rows)
-        connection = _FakeConnection(cursor)
-
-        counter = _DummyCounter()
-        mock_record_counter.return_value = _DummyCounterContext(counter)
-
-        result = incremental.sync_table(
-            connection,
-            entry,
-            state,
-            ["_SDC_RECORD_HASH", "FIELD1", "MERGE_EVENT_TIME"],
-        )
-
-        self.assertEqual(1, result)
-        # Verify _SDC_RECORD_HASH is NOT in the SQL query (it's synthetic)
-        self.assertNotIn("_SDC_RECORD_HASH", cursor.last_sql)
-        # Verify FIELD1 and MERGE_EVENT_TIME ARE in the SQL query
-        self.assertIn("FIELD1", cursor.last_sql)
-        self.assertIn("MERGE_EVENT_TIME", cursor.last_sql)
-        # Verify write_record was called
-        self.assertEqual(1, mock_write_record.call_count)
-        # Get the record that was written
-        written_record = mock_write_record.call_args[0][1]
-        # Verify _SDC_RECORD_HASH was added to the output
-        self.assertIn("_SDC_RECORD_HASH", written_record)
-        # Verify it's a non-empty string
-        self.assertIsInstance(written_record["_SDC_RECORD_HASH"], str)
-        self.assertTrue(len(written_record["_SDC_RECORD_HASH"]) > 0)

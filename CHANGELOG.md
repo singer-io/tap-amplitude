@@ -1,7 +1,7 @@
 # Changelog
 
-## 2.0.0
-  * Added deterministic `_SDC_RECORD_HASH` primary key for merge tables [#21](https://github.com/singer-io/tap-amplitude/pull/21)
+## 1.4.1
+  * Removed primary key for merge tables [#21](https://github.com/singer-io/tap-amplitude/pull/21)
 
 ## 1.4.0
   * Upgrade python, upgrade dependencies, added unitests, added mocked integration tests [#20](https://github.com/singer-io/tap-amplitude/pull/20)

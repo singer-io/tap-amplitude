@@ -6,7 +6,6 @@ import json
 import pendulum
 import singer
 import singer.metrics as metrics
-import hashlib
 
 from singer import Transformer
 from singer import metadata
@@ -53,21 +52,6 @@ def process_row(row, columns):
     return rec
 
 
-def generate_record_hash(record):
-    """
-    Generate a deterministic hash for a record based on all its values.
-    Sorts keys to ensure consistent ordering.
-    """
-    # Sort keys to ensure deterministic hash
-    sorted_items = sorted(record.items())
-
-    # Create a string representation of all values
-    hash_input = json.dumps(sorted_items, sort_keys=True, default=str)
-
-    # Generate MD5 hash
-    return hashlib.md5(hash_input.encode('utf-8')).hexdigest()
-
-
 def sync_table(connection, catalog_entry, state, columns):
     replication_key_value = None
 
@@ -85,12 +69,8 @@ def sync_table(connection, catalog_entry, state, columns):
     # Prepare selected fields for SQL
     selected_columns = get_selected_columns(catalog_entry, columns)
 
-    # Filter out synthetic fields that don't exist in the database
-    # _SDC_RECORD_HASH is generated after fetching data, not selected from DB
-    db_columns = [col for col in selected_columns if col != '_SDC_RECORD_HASH']
-
     tap_stream_id = catalog_entry.tap_stream_id.replace('-', '.')
-    select_sql = generate_select_sql(tap_stream_id, db_columns)
+    select_sql = generate_select_sql(tap_stream_id, selected_columns)
 
     # Apply replication key filtering
     if replication_key_value is not None:
@@ -119,16 +99,12 @@ def sync_table(connection, catalog_entry, state, columns):
             counter.increment()
             rows_saved += 1
 
-            rec = process_row(row, db_columns)
+            rec = process_row(row, selected_columns)
 
             # Convert datetime/date to ISO strings
             for k, v in rec.items():
                 if isinstance(v, (datetime.datetime, datetime.date)):
                     rec[k] = v.isoformat()
-
-            # Generate hash for merge tables before transformation
-            if "merge" in catalog_entry.tap_stream_id.lower():
-                rec['_SDC_RECORD_HASH'] = generate_record_hash(rec)
 
             # Apply transformations
             with Transformer() as transformer:
