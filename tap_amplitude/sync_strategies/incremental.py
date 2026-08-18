@@ -84,8 +84,13 @@ def sync_table(connection, catalog_entry, state, columns):
 
     # Prepare selected fields for SQL
     selected_columns = get_selected_columns(catalog_entry, columns)
+
+    # Filter out synthetic fields that don't exist in the database
+    # _SDC_RECORD_HASH is generated after fetching data, not selected from DB
+    db_columns = [col for col in selected_columns if col != '_SDC_RECORD_HASH']
+
     tap_stream_id = catalog_entry.tap_stream_id.replace('-', '.')
-    select_sql = generate_select_sql(tap_stream_id, selected_columns)
+    select_sql = generate_select_sql(tap_stream_id, db_columns)
 
     # Apply replication key filtering
     if replication_key_value is not None:
@@ -115,7 +120,7 @@ def sync_table(connection, catalog_entry, state, columns):
             counter.increment()
             rows_saved += 1
 
-            rec = process_row(row, selected_columns)
+            rec = process_row(row, db_columns)
 
             # Convert datetime/date to ISO strings
             for k, v in rec.items():

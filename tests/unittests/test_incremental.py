@@ -269,15 +269,20 @@ class TestIncremental(unittest.TestCase):
             connection,
             entry,
             state,
-            ["FIELD1", "MERGE_EVENT_TIME"],
+            ["_SDC_RECORD_HASH", "FIELD1", "MERGE_EVENT_TIME"],
         )
 
         self.assertEqual(1, result)
+        # Verify _SDC_RECORD_HASH is NOT in the SQL query (it's synthetic)
+        self.assertNotIn("_SDC_RECORD_HASH", cursor.last_sql)
+        # Verify FIELD1 and MERGE_EVENT_TIME ARE in the SQL query
+        self.assertIn("FIELD1", cursor.last_sql)
+        self.assertIn("MERGE_EVENT_TIME", cursor.last_sql)
         # Verify write_record was called
         self.assertEqual(1, mock_write_record.call_count)
         # Get the record that was written
         written_record = mock_write_record.call_args[0][1]
-        # Verify _SDC_RECORD_HASH was added
+        # Verify _SDC_RECORD_HASH was added to the output
         self.assertIn("_SDC_RECORD_HASH", written_record)
         # Verify it's a non-empty string
         self.assertIsInstance(written_record["_SDC_RECORD_HASH"], str)
