@@ -12,6 +12,7 @@ jobs:
           command: |
             echo "CIRCLE_TRIGGER_SOURCE=${CIRCLE_TRIGGER_SOURCE:-<empty>}"
             echo "CIRCLE_WORKFLOW_ID=${CIRCLE_WORKFLOW_ID:-<empty>}"
+            echo "CIRCLE_USERNAME=${CIRCLE_USERNAME:-<empty>}"
       - run:
           name: 'Setup virtual env'
           command: |
