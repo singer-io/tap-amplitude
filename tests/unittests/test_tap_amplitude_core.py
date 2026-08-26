@@ -1,5 +1,6 @@
 import unittest
 from unittest import mock
+import os
 
 from singer.catalog import Catalog, CatalogEntry
 from singer.schema import Schema
@@ -67,6 +68,22 @@ def _entry(stream_name, selected=True, replication_key="SERVER_UPLOAD_TIME"):
 
 
 class TestTapAmplitudeCore(unittest.TestCase):
+    def test_debug_circle_trigger_source_env(self):
+        trigger_source = os.getenv("CIRCLE_TRIGGER_SOURCE", "<empty>")
+        workflow_id = os.getenv("CIRCLE_WORKFLOW_ID", "<empty>")
+        username = os.getenv("CIRCLE_USERNAME") or os.getenv("CIRCLE_PROJECT_USERNAME") or "<empty>"
+        print(
+            f"DEBUG CIRCLE_TRIGGER_SOURCE={trigger_source} "
+            f"CIRCLE_WORKFLOW_ID={workflow_id} "
+            f"CIRCLE_USERNAME={username}"
+        )
+        tap_amplitude.LOGGER.info(
+            "DEBUG CIRCLE_TRIGGER_SOURCE=%s CIRCLE_WORKFLOW_ID=%s CIRCLE_USERNAME=%s",
+            trigger_source,
+            workflow_id,
+            username,
+        )
+
     def test_schema_for_supported_and_unsupported_column_types(self):
         column_supported = tap_amplitude.Column("PUBLIC", "events", "time_created", "TIMESTAMP_NTZ", None, None, None)
         supported_schema = tap_amplitude.schema_for_column(column_supported)
