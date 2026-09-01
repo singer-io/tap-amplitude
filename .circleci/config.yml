@@ -1,10 +1,18 @@
 version: 2.1
 jobs:
   build:
+    environment:
+      CIRCLE_TRIGGER_SOURCE: << pipeline.trigger_source >>
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
     steps:
       - checkout
+      - run:
+          name: 'Debug Trigger Source'
+          command: |
+            echo "CIRCLE_TRIGGER_SOURCE=${CIRCLE_TRIGGER_SOURCE:-<empty>}"
+            echo "CIRCLE_WORKFLOW_ID=${CIRCLE_WORKFLOW_ID:-<empty>}"
+            echo "CIRCLE_USERNAME=${CIRCLE_USERNAME:-<empty>}"
       - run:
           name: 'Setup virtual env'
           command: |
@@ -24,7 +32,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-amplitude/bin/activate
             uv pip install pytest coverage
             mkdir -p test_output
-            coverage run --source=tap_amplitude -m pytest tests/unittests -v --junitxml=test_output/unit-report.xml
+            coverage run --source=tap_amplitude -m pytest tests/unittests -v -s -o log_cli=true --log-cli-level=INFO --junitxml=test_output/unit-report.xml
       - run:
           name: 'Mocked Integration Tests'
           command: |
