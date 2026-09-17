@@ -17,4 +17,3 @@ LOGGER = get_logger()
 
     # Test loading bookmark.
     # 
-
