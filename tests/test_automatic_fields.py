@@ -1,0 +1,12 @@
+"""Test that automatic fields are replicated with minimal selection."""
+from base import AmplitudeBaseTest
+from tap_tester.base_suite_tests.automatic_fields_test import MinimumSelectionTest
+
+
+class AmplitudeAutomaticFieldsTest(MinimumSelectionTest, AmplitudeBaseTest):
+    @staticmethod
+    def name():
+        return "tap_tester_amplitude_automatic_fields_test"
+
+    def streams_to_test(self):
+        return self.expected_stream_names()
