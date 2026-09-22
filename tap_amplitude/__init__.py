@@ -101,7 +101,8 @@ def discover_catalog(connection):
 
         if "merge" in table.lower():
             # Merge tables have no primary key
-            replication_key = "MERGE_EVENT_TIME"
+            if "MERGE_EVENT_TIME" in available_cols:
+                replication_key = "MERGE_EVENT_TIME"
         elif "events" in table.lower():
             key_properties.append("UUID")
             replication_key = "SERVER_UPLOAD_TIME"
