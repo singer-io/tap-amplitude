@@ -93,11 +93,14 @@ class TestMergeTable(unittest.TestCase):
         self.assertEqual(TestMergeTable.table_name, stream_dict.get('table_name'))
         self.assertEqual("{}-{}".format(TestMergeTable.schema_name, TestMergeTable.table_name), stream_dict.get('stream'))
 
-        # Check that there is no key property.
+        # Check that merge tables have no primary key.
         mdata = metadata.to_map(stream_dict['metadata'])
         stream_metadata = mdata.get((), {})
         key_properties = stream_metadata.get('table-key-properties', [])
-        self.assertEqual(len(key_properties), 0)
+        self.assertEqual([], key_properties)
+        
+        # Check that there is no replication key (MERGE_EVENT_TIME column doesn't exist).
+        self.assertIsNone(stream_dict.get('replication_key'))
 
         # Check metadata.
 
