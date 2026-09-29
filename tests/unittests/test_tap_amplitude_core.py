@@ -98,6 +98,8 @@ class TestTapAmplitudeCore(unittest.TestCase):
             ("PUBLIC", "AMPLITUDE_MERGE_EVENTS", "MERGE_ID", "STRING", None, None, None),
             # Merge table without MERGE_EVENT_TIME - cannot be replicated incrementally
             ("PUBLIC", "merge_table_no_rep_key", "MERGE_ID", "STRING", None, None, None),
+            # Events table without SERVER_UPLOAD_TIME - cannot be replicated incrementally
+            ("PUBLIC", "events_no_rep_key", "UUID", "STRING", None, None, None),
             # Unrelated table - cannot be replicated incrementally
             ("PUBLIC", "other_table", "FIELD", "STRING", None, None, None),
         ]
@@ -112,6 +114,7 @@ class TestTapAmplitudeCore(unittest.TestCase):
         )
         self.assertNotIn("PUBLIC-other_table", stream_names)
         self.assertNotIn("PUBLIC-merge_table_no_rep_key", stream_names)
+        self.assertNotIn("PUBLIC-events_no_rep_key", stream_names)
 
         events_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-events_table")
         merge_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-merge_table")
@@ -140,6 +143,42 @@ class TestTapAmplitudeCore(unittest.TestCase):
         self.assertNotIn(("properties", "SERVER_UPLOAD_TIME"), amplitude_merge_md)
         # Verify MERGE_EVENT_TIME is automatic for merge tables
         self.assertEqual("automatic", amplitude_merge_md.get(("properties", "MERGE_EVENT_TIME"), {}).get("inclusion"))
+
+    def test_discover_catalog_events_table_without_uuid_has_no_key_properties(self):
+        records = [
+            ("PUBLIC", "events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "events_table", "FIELD", "STRING", None, None, None),
+        ]
+
+        catalog = tap_amplitude.discover_catalog(_FakeConnection(records))
+
+        self.assertEqual(1, len(catalog.streams))
+        entry = catalog.streams[0]
+        self.assertEqual("SERVER_UPLOAD_TIME", entry.replication_key)
+        self.assertEqual("INCREMENTAL", entry.replication_method)
+        self.assertEqual([], entry.key_properties)
+
+        entry_md = {tuple(item["breadcrumb"]): item["metadata"] for item in entry.metadata}
+        self.assertEqual([], entry_md[()]["table-key-properties"])
+        self.assertNotIn(("properties", "UUID"), entry_md)
+
+    def test_discover_catalog_every_stream_replication_key_exists_in_schema(self):
+        records = [
+            ("PUBLIC", "events_table", "UUID", "STRING", None, None, None),
+            ("PUBLIC", "events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "events_no_rep_key", "UUID", "STRING", None, None, None),
+            ("PUBLIC", "merge_table", "MERGE_EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "merge_table_no_rep_key", "MERGE_ID", "STRING", None, None, None),
+        ]
+
+        catalog = tap_amplitude.discover_catalog(_FakeConnection(records))
+
+        self.assertTrue(catalog.streams)
+        for entry in catalog.streams:
+            schema_properties = set(entry.schema.properties.keys())
+            self.assertIn(entry.replication_key, schema_properties)
+            for key in entry.key_properties:
+                self.assertIn(key, schema_properties)
 
     @mock.patch("tap_amplitude.discover_catalog")
     def test_do_discover(self, mock_discover_catalog):

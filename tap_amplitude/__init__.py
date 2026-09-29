@@ -102,24 +102,31 @@ def discover_catalog(connection):
         if "merge" in table.lower():
             # Merge tables have no primary key
             if "MERGE_EVENT_TIME" in available_cols:
-                replication_key = "MERGE_EVENT_TIME"
+                replication_key = available_cols["MERGE_EVENT_TIME"].column_name
         elif "events" in table.lower():
-            key_properties.append("UUID")
-            replication_key = "SERVER_UPLOAD_TIME"
+            if "SERVER_UPLOAD_TIME" in available_cols:
+                replication_key = available_cols["SERVER_UPLOAD_TIME"].column_name
+                if "UUID" in available_cols:
+                    key_properties.append(available_cols["UUID"].column_name)
+                else:
+                    LOGGER.warning(
+                        "%s: No UUID column found, stream will be discovered without a primary key",
+                        tap_stream_id
+                    )
 
         # The tap only supports INCREMENTAL replication. Tables without a usable
-        # replication key are excluded from the catalog so they can never
-        # be selected for a sync the tap cannot perform.
+        # replication column are excluded from the catalog so they can never be
+        # selected for a sync the tap cannot perform.
         if not replication_key:
             LOGGER.info(
-                "%s: Skipping - no replication key available, INCREMENTAL replication is not supported",
+                "%s: Skipping - no replication key column available, INCREMENTAL replication is not supported",
                 tap_stream_id
             )
             continue
 
         properties = {}
         for c in cols:
-            incl = "automatic" if c.column_name.upper() in {replication_key, *key_properties} else "available"
+            incl = "automatic" if c.column_name in {replication_key, *key_properties} else "available"
             properties[c.column_name] = schema_for_column(c, incl)
 
         schema_obj = Schema(type="object", properties=properties)

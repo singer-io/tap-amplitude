@@ -69,7 +69,7 @@ class TestDiscovery(unittest.TestCase):
         self.assertEqual("MERGE_EVENT_TIME", streams["PUBLIC-merge_events"].replication_key)
 
     def test_discovery_events_table_without_expected_columns(self):
-        """Test events tables that don't have UUID or SERVER_UPLOAD_TIME columns."""
+        """Events tables without SERVER_UPLOAD_TIME are excluded from the catalog."""
         records = [
             ("PUBLIC", "custom_events_table", "ID", "STRING", None, None, None),
             ("PUBLIC", "custom_events_table", "EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
@@ -79,12 +79,52 @@ class TestDiscovery(unittest.TestCase):
         catalog = tap_amplitude.discover_catalog(connection)
         streams = {entry.stream: entry for entry in catalog.streams}
 
+        # The tap only supports INCREMENTAL replication. A table with neither
+        # UUID nor SERVER_UPLOAD_TIME must not be discoverable, otherwise the
+        # catalog would advertise nonexistent fields and incremental sync would
+        # build an ORDER BY against a column Snowflake cannot resolve.
+        self.assertEqual(0, len(catalog.streams))
+        self.assertNotIn("PUBLIC-custom_events_table", streams)
+
+    def test_discovery_never_advertises_columns_missing_from_the_table(self):
+        """Discovered streams must only reference columns that actually exist."""
+        records = [
+            ("PUBLIC", "custom_events_table", "ID", "STRING", None, None, None),
+            ("PUBLIC", "custom_events_table", "EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "events_table", "UUID", "STRING", None, None, None),
+            ("PUBLIC", "events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "merge_events", "MERGE_EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "merge_no_time", "MERGE_ID", "STRING", None, None, None),
+        ]
+        connection = _Connection(records)
+
+        catalog = tap_amplitude.discover_catalog(connection)
+
+        self.assertEqual(
+            {"PUBLIC-events_table", "PUBLIC-merge_events"},
+            {entry.stream for entry in catalog.streams}
+        )
+
+        for entry in catalog.streams:
+            schema_properties = set(entry.schema.properties.keys())
+            self.assertIn(entry.replication_key, schema_properties)
+            for key in entry.key_properties:
+                self.assertIn(key, schema_properties)
+
+    def test_discovery_events_table_without_uuid_column(self):
+        """Events tables with SERVER_UPLOAD_TIME but no UUID are discovered without a key."""
+        records = [
+            ("PUBLIC", "custom_events_table", "ID", "STRING", None, None, None),
+            ("PUBLIC", "custom_events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
+        ]
+        connection = _Connection(records)
+
+        catalog = tap_amplitude.discover_catalog(connection)
+        streams = {entry.stream: entry for entry in catalog.streams}
+
         self.assertEqual(1, len(catalog.streams))
-        self.assertIn("PUBLIC-custom_events_table", streams)
-        
-        # Events table still gets UUID as key even if the column doesn't exist (current behavior)
-        # This is because the discovery logic assigns keys based on table name patterns
-        self.assertEqual(["UUID"], streams["PUBLIC-custom_events_table"].key_properties)
-        # Events table without SERVER_UPLOAD_TIME column still gets it as replication_key (current behavior)
-        self.assertEqual("SERVER_UPLOAD_TIME", streams["PUBLIC-custom_events_table"].replication_key)
+        entry = streams["PUBLIC-custom_events_table"]
+        self.assertEqual("SERVER_UPLOAD_TIME", entry.replication_key)
+        self.assertEqual("INCREMENTAL", entry.replication_method)
+        self.assertEqual([], entry.key_properties)
 
