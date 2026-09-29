@@ -98,16 +98,35 @@ def discover_catalog(connection):
 
         key_properties = []
         replication_key = None
+
         if "merge" in table.lower():
-            replication_key = "MERGE_EVENT_TIME"
-            key_properties.append("MERGE_ID")
+            # Merge tables have no primary key
+            if "MERGE_EVENT_TIME" in available_cols:
+                replication_key = available_cols["MERGE_EVENT_TIME"].column_name
         elif "events" in table.lower():
-            key_properties.append("UUID")
-            replication_key = "SERVER_UPLOAD_TIME"
+            if "SERVER_UPLOAD_TIME" in available_cols:
+                replication_key = available_cols["SERVER_UPLOAD_TIME"].column_name
+                if "UUID" in available_cols:
+                    key_properties.append(available_cols["UUID"].column_name)
+                else:
+                    LOGGER.warning(
+                        "%s: No UUID column found, stream will be discovered without a primary key",
+                        tap_stream_id
+                    )
+
+        # The tap only supports INCREMENTAL replication. Tables without a usable
+        # replication column are excluded from the catalog so they can never be
+        # selected for a sync the tap cannot perform.
+        if not replication_key:
+            LOGGER.info(
+                "%s: Skipping - no replication key column available, INCREMENTAL replication is not supported",
+                tap_stream_id
+            )
+            continue
 
         properties = {}
         for c in cols:
-            incl = "automatic" if c.column_name.upper() in {replication_key, *key_properties} else "available"
+            incl = "automatic" if c.column_name in {replication_key, *key_properties} else "available"
             properties[c.column_name] = schema_for_column(c, incl)
 
         schema_obj = Schema(type="object", properties=properties)
@@ -115,15 +134,13 @@ def discover_catalog(connection):
         md_map = metadata.to_map(create_column_metadata(cols))
         md_map = metadata.write(md_map, (), "inclusion", "available")
         md_map = metadata.write(md_map, (), "table-key-properties", key_properties)
-        md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key] if replication_key else [])
-        md_map = metadata.write(md_map, (), "forced-replication-method", "INCREMENTAL" if replication_key else "FULL_TABLE")
+        md_map = metadata.write(md_map, (), "valid-replication-keys", [replication_key])
+        md_map = metadata.write(md_map, (), "forced-replication-method", "INCREMENTAL")
 
-        if key_properties:
-            for key in key_properties:
-                md_map = metadata.write(md_map, ("properties", key), "inclusion", "automatic")
+        for key in key_properties:
+            md_map = metadata.write(md_map, ("properties", key), "inclusion", "automatic")
 
-        if replication_key:
-            md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
+        md_map = metadata.write(md_map, ("properties", replication_key), "inclusion", "automatic")
 
         entry = CatalogEntry(
             stream=tap_stream_id,
@@ -132,7 +149,7 @@ def discover_catalog(connection):
             metadata=metadata.to_list(md_map),
             key_properties=key_properties,
             replication_key=replication_key,
-            replication_method= "INCREMENTAL" if replication_key else "FULL_TABLE"
+            replication_method="INCREMENTAL"
         )
 
         # No "selected": true assignments at any level — discovery only
@@ -181,6 +198,16 @@ def do_sync(con, catalog, state):
 
         if not stream_is_selected(mdata):
             LOGGER.info("%s: Skipping - not selected", stream_name)
+            continue
+
+        # Guard against stale catalogs generated before non-incremental streams
+        # were dropped from discovery. Only INCREMENTAL replication is supported.
+        if not catalog_entry.replication_key:
+            LOGGER.warning(
+                "%s: Skipping - no replication key, only INCREMENTAL replication is supported. "
+                "Re-run discovery to refresh the catalog.",
+                stream_name
+            )
             continue
 
         singer.write_state(state)

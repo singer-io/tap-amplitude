@@ -89,31 +89,51 @@ class TestTapAmplitudeCore(unittest.TestCase):
             any(tuple(item["breadcrumb"]) == ("properties", "UUID") for item in mdata_list)
         )
 
-    def test_discover_catalog_events_merge_and_full_table(self):
+    def test_discover_catalog_excludes_streams_without_replication_key(self):
         records = [
             ("PUBLIC", "events_table", "UUID", "STRING", None, None, None),
             ("PUBLIC", "events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
             ("PUBLIC", "merge_table", "MERGE_EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
             ("PUBLIC", "AMPLITUDE_MERGE_EVENTS", "MERGE_EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
             ("PUBLIC", "AMPLITUDE_MERGE_EVENTS", "MERGE_ID", "STRING", None, None, None),
+            # Merge table without MERGE_EVENT_TIME - cannot be replicated incrementally
+            ("PUBLIC", "merge_table_no_rep_key", "MERGE_ID", "STRING", None, None, None),
+            # Events table without SERVER_UPLOAD_TIME - cannot be replicated incrementally
+            ("PUBLIC", "events_no_rep_key", "UUID", "STRING", None, None, None),
+            # Unrelated table - cannot be replicated incrementally
             ("PUBLIC", "other_table", "FIELD", "STRING", None, None, None),
         ]
         connection = _FakeConnection(records)
 
         catalog = tap_amplitude.discover_catalog(connection)
 
-        self.assertEqual(4, len(catalog.streams))
+        stream_names = {s.stream for s in catalog.streams}
+        self.assertEqual(
+            {"PUBLIC-events_table", "PUBLIC-merge_table", "PUBLIC-AMPLITUDE_MERGE_EVENTS"},
+            stream_names
+        )
+        self.assertNotIn("PUBLIC-other_table", stream_names)
+        self.assertNotIn("PUBLIC-merge_table_no_rep_key", stream_names)
+        self.assertNotIn("PUBLIC-events_no_rep_key", stream_names)
+
         events_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-events_table")
         merge_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-merge_table")
         amplitude_merge_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-AMPLITUDE_MERGE_EVENTS")
-        other_entry = next(s for s in catalog.streams if s.stream == "PUBLIC-other_table")
 
         self.assertEqual("SERVER_UPLOAD_TIME", events_entry.replication_key)
-        self.assertEqual("INCREMENTAL", events_entry.replication_method)
         self.assertEqual("MERGE_EVENT_TIME", merge_entry.replication_key)
         self.assertEqual("MERGE_EVENT_TIME", amplitude_merge_entry.replication_key)
         self.assertEqual(["UUID"], events_entry.key_properties)
-        self.assertEqual(["MERGE_ID"], amplitude_merge_entry.key_properties)
+        # Merge tables have no primary key
+        self.assertEqual([], merge_entry.key_properties)
+        self.assertEqual([], amplitude_merge_entry.key_properties)
+
+        # Every discovered stream is forced to INCREMENTAL replication
+        for entry in catalog.streams:
+            self.assertEqual("INCREMENTAL", entry.replication_method)
+            entry_md = {tuple(item["breadcrumb"]): item["metadata"] for item in entry.metadata}
+            self.assertEqual("INCREMENTAL", entry_md[()]["forced-replication-method"])
+            self.assertEqual([entry.replication_key], entry_md[()]["valid-replication-keys"])
 
         amplitude_merge_md = {
             tuple(item["breadcrumb"]): item["metadata"]
@@ -121,7 +141,44 @@ class TestTapAmplitudeCore(unittest.TestCase):
         }
         self.assertNotIn(("properties", "UUID"), amplitude_merge_md)
         self.assertNotIn(("properties", "SERVER_UPLOAD_TIME"), amplitude_merge_md)
-        self.assertEqual("FULL_TABLE", other_entry.replication_method)
+        # Verify MERGE_EVENT_TIME is automatic for merge tables
+        self.assertEqual("automatic", amplitude_merge_md.get(("properties", "MERGE_EVENT_TIME"), {}).get("inclusion"))
+
+    def test_discover_catalog_events_table_without_uuid_has_no_key_properties(self):
+        records = [
+            ("PUBLIC", "events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "events_table", "FIELD", "STRING", None, None, None),
+        ]
+
+        catalog = tap_amplitude.discover_catalog(_FakeConnection(records))
+
+        self.assertEqual(1, len(catalog.streams))
+        entry = catalog.streams[0]
+        self.assertEqual("SERVER_UPLOAD_TIME", entry.replication_key)
+        self.assertEqual("INCREMENTAL", entry.replication_method)
+        self.assertEqual([], entry.key_properties)
+
+        entry_md = {tuple(item["breadcrumb"]): item["metadata"] for item in entry.metadata}
+        self.assertEqual([], entry_md[()]["table-key-properties"])
+        self.assertNotIn(("properties", "UUID"), entry_md)
+
+    def test_discover_catalog_every_stream_replication_key_exists_in_schema(self):
+        records = [
+            ("PUBLIC", "events_table", "UUID", "STRING", None, None, None),
+            ("PUBLIC", "events_table", "SERVER_UPLOAD_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "events_no_rep_key", "UUID", "STRING", None, None, None),
+            ("PUBLIC", "merge_table", "MERGE_EVENT_TIME", "TIMESTAMP_NTZ", None, None, None),
+            ("PUBLIC", "merge_table_no_rep_key", "MERGE_ID", "STRING", None, None, None),
+        ]
+
+        catalog = tap_amplitude.discover_catalog(_FakeConnection(records))
+
+        self.assertTrue(catalog.streams)
+        for entry in catalog.streams:
+            schema_properties = set(entry.schema.properties.keys())
+            self.assertIn(entry.replication_key, schema_properties)
+            for key in entry.key_properties:
+                self.assertIn(key, schema_properties)
 
     @mock.patch("tap_amplitude.discover_catalog")
     def test_do_discover(self, mock_discover_catalog):
@@ -177,6 +234,20 @@ class TestTapAmplitudeCore(unittest.TestCase):
         mock_do_sync_incremental.assert_called_once()
         self.assertEqual(1, mock_write_schema.call_count)
         self.assertGreaterEqual(mock_write_state.call_count, 2)
+
+    @mock.patch("tap_amplitude.singer.write_state")
+    @mock.patch("tap_amplitude.singer.write_schema")
+    @mock.patch("tap_amplitude.do_sync_incremental", return_value=5)
+    def test_do_sync_skips_selected_stream_without_replication_key(
+        self, mock_do_sync_incremental, mock_write_schema, _mock_write_state
+    ):
+        # Simulates a stale catalog that still contains a non-incremental stream
+        catalog = Catalog([_entry("legacy_full_table", selected=True, replication_key=None)])
+
+        tap_amplitude.do_sync(mock.MagicMock(), catalog, {})
+
+        mock_do_sync_incremental.assert_not_called()
+        mock_write_schema.assert_not_called()
 
     @mock.patch("tap_amplitude.LOGGER.critical")
     @mock.patch("tap_amplitude.do_sync_incremental", side_effect=RuntimeError("boom"))
