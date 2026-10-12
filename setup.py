@@ -9,7 +9,7 @@ setup(name='tap-amplitude',
       url='https://singer.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       install_requires=[
-          'snowflake-connector-python==4.7.1',
+          'snowflake-connector-python==4.7.3',
           'pendulum==3.2.0',
           'singer-python==6.8.0',
           'backoff==2.2.1'
